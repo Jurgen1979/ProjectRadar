@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import type { DashboardCard, DashboardData } from "@/lib/projects/dashboard-data";
 import type { Signal } from "@/lib/projects/signals";
 import { ProjectCard } from "./project-card";
@@ -124,6 +125,12 @@ export function ProjectsDashboard({ data }: { data: DashboardData }) {
             {data.staleDays !== 14 ? ` · stale-drempel ${data.staleDays} dagen` : ""}
           </p>
         </div>
+        <Link
+          href="/projects/new"
+          className="px-3 py-1.5 text-sm rounded-md bg-accent text-accent-foreground hover:opacity-90"
+        >
+          + nieuw project
+        </Link>
       </header>
 
       <div className="rounded-lg border border-border bg-background p-3 space-y-3">

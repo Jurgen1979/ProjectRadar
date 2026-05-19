@@ -34,7 +34,12 @@ export function ProjectHeader({
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap justify-end">
-          <ActionButton label="Update toevoegen" hint="Fase 6" />
+          <Link
+            href={`/projects/${project.slug}/updates/new`}
+            className="px-3 py-1.5 text-xs rounded-md bg-accent text-accent-foreground hover:opacity-90"
+          >
+            Update toevoegen
+          </Link>
           <ActionButton label="Status genereren" hint="Fase 7 — AI" />
           <ActionButton label="Exporteren" hint="Fase 9" />
         </div>

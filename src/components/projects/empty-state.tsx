@@ -27,19 +27,22 @@ export function NoRootState({ message }: { message: string }) {
 
 export function NoProjectsState({ root }: { root: string }) {
   return (
-    <div className="rounded-lg border border-dashed border-border bg-muted/30 p-6 max-w-2xl space-y-3">
-      <h2 className="text-lg font-semibold">Nog geen projecten</h2>
-      <p className="text-sm text-muted-foreground leading-6">
-        De projectroot is leeg.
-      </p>
-      <p className="text-sm text-muted-foreground font-mono break-all">
-        {root}/projects/
-      </p>
-      <p className="text-sm text-muted-foreground leading-6">
-        Maak een submap met dezelfde naam als je project-slug, en daarin
-        ten minste een <code className="font-mono bg-muted px-1 rounded">project.meta.json</code>.
-        Het scaffold-formulier komt in Fase 5.
-      </p>
+    <div className="rounded-lg border border-dashed border-border bg-muted/30 p-6 max-w-2xl space-y-4">
+      <div>
+        <h2 className="text-lg font-semibold">Nog geen projecten</h2>
+        <p className="text-sm text-muted-foreground leading-6 mt-1">
+          De projectroot is leeg.
+        </p>
+        <p className="text-sm text-muted-foreground font-mono break-all mt-1">
+          {root}/projects/
+        </p>
+      </div>
+      <Link
+        href="/projects/new"
+        className="inline-block px-3 py-1.5 text-sm rounded-md bg-accent text-accent-foreground hover:opacity-90"
+      >
+        + eerste project aanmaken
+      </Link>
     </div>
   );
 }
