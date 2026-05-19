@@ -46,7 +46,12 @@ export function ProjectHeader({
           >
             Metadata bewerken
           </Link>
-          <ActionButton label="Status genereren" hint="Fase 7 — AI" />
+          <Link
+            href={`/projects/${project.slug}/status/generate`}
+            className="px-3 py-1.5 text-xs rounded-md border border-border bg-background hover:bg-muted"
+          >
+            Status genereren
+          </Link>
           <ActionButton label="Exporteren" hint="Fase 9" />
         </div>
       </div>

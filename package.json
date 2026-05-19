@@ -7,9 +7,11 @@
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
-    "test": "node --conditions=react-server --import tsx --test tests/parse/*.test.ts tests/projects/*.test.ts"
+    "test": "node --conditions=react-server --import tsx --test tests/parse/*.test.ts tests/projects/*.test.ts tests/ai/*.test.ts"
   },
   "dependencies": {
+    "@ai-sdk/openai": "^3.0.64",
+    "ai": "^6.0.185",
     "clsx": "^2.1.1",
     "next": "16.2.6",
     "react": "19.2.4",
