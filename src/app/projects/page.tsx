@@ -1,23 +1,26 @@
-import { Placeholder } from "@/components/placeholder";
 import { getConfigStatus } from "@/lib/config";
+import { loadDashboardData } from "@/lib/projects/dashboard-data";
+import { ProjectsDashboard } from "@/components/projects/dashboard";
+import { BrokenProjectsList } from "@/components/projects/broken-list";
+import { NoProjectsState, NoRootState } from "@/components/projects/empty-state";
 
-export default function ProjectsPage() {
+export default async function ProjectsPage() {
   const status = getConfigStatus();
-  const rootInfo =
-    status.kind === "ok"
-      ? `Projectroot actief: ${status.root}`
-      : "Geen actieve projectroot. Stel PROJECTRADAR_ROOT in via .env.local.";
+
+  if (status.kind !== "ok") {
+    return <NoRootState message={status.message} />;
+  }
+
+  const data = await loadDashboardData(status.root, status.config);
+
+  if (data.cards.length === 0 && data.broken.length === 0) {
+    return <NoProjectsState root={status.root} />;
+  }
 
   return (
     <div className="space-y-6">
-      <Placeholder
-        title="Projecten"
-        description="Het dashboard met alle projectkaarten, filters en signalen. In fase 0 nog leeg — eerst configuratie en helpers, daarna parsing en dashboard."
-        next="Fase 1 — markdown/JSON parsers en projecten uitlezen."
-      />
-      <div className="rounded-lg border border-border bg-muted/40 px-4 py-3 text-sm text-muted-foreground font-mono">
-        {rootInfo}
-      </div>
+      <ProjectsDashboard data={data} />
+      <BrokenProjectsList broken={data.broken} skipped={data.skipped} />
     </div>
   );
 }
