@@ -25,5 +25,5 @@ export type RiskLevel = z.infer<typeof RiskLevel>;
 export const Priority = z.enum(["low", "medium", "high"]);
 export type Priority = z.infer<typeof Priority>;
 
-export const AiProvider = z.enum(["openai", "anthropic", "none"]);
+export const AiProvider = z.enum(["openrouter", "openai", "none"]);
 export type AiProvider = z.infer<typeof AiProvider>;

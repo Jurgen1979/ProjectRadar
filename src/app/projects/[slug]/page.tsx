@@ -14,6 +14,8 @@ import { UpdatesSection } from "@/components/projects/detail/updates-section";
 import { DecisionsSection } from "@/components/projects/detail/decisions-section";
 import { LogSection } from "@/components/projects/detail/log-section";
 import { SourcesSection } from "@/components/projects/detail/sources-section";
+import { RecoveryPanel } from "@/components/projects/detail/recovery-panel";
+import { detectMissing, previewRecoveryContent } from "@/lib/projects/recover";
 
 export default async function ProjectDetailPage({
   params,
@@ -61,6 +63,13 @@ export default async function ProjectDetailPage({
 
   const { project } = result;
   const signals = computeSignals(project, { staleDays: cfg.config.staleDays });
+  const missing = await detectMissing(cfg.root, slug);
+  const previews = await Promise.all(
+    missing.files.map(async (file) => ({
+      file,
+      preview: await previewRecoveryContent(cfg.root, slug, file),
+    })),
+  );
 
   return (
     <div className="space-y-6">
@@ -71,6 +80,7 @@ export default async function ProjectDetailPage({
         lastSignal={signals.lastSignal}
       />
       <WarningsBanner warnings={project.warnings} />
+      <RecoveryPanel slug={slug} files={previews} folders={missing.folders} />
 
       <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-4">
         <div className="space-y-4 min-w-0">

@@ -40,6 +40,12 @@ export function ProjectHeader({
           >
             Update toevoegen
           </Link>
+          <Link
+            href={`/projects/${project.slug}/edit`}
+            className="px-3 py-1.5 text-xs rounded-md border border-border bg-background hover:bg-muted"
+          >
+            Metadata bewerken
+          </Link>
           <ActionButton label="Status genereren" hint="Fase 7 — AI" />
           <ActionButton label="Exporteren" hint="Fase 9" />
         </div>

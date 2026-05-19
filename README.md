@@ -24,16 +24,25 @@ Open <http://localhost:3000>. Zonder `PROJECTRADAR_ROOT` toont de app een gele b
 
 ## Configuratie
 
-Twee plekken, beide optioneel in Fase 0:
+Twee plekken, beide optioneel:
 
 1. **`.env.local`** — runtime-configuratie:
    - `PROJECTRADAR_ROOT` — absoluut pad naar je projectroot
-   - `AI_PROVIDER` — `openai` / `anthropic` / `none`
-   - `AI_MODEL` — modelnaam (bv. `gpt-4o-mini`, `claude-haiku-4-5`)
-   - `OPENAI_API_KEY` / `ANTHROPIC_API_KEY`
+   - `AI_PROVIDER` — `openrouter` / `openai` / `none`
+   - `AI_MODEL` — modelnaam (zie hieronder)
+   - `OPENROUTER_API_KEY` of `OPENAI_API_KEY` afhankelijk van provider
 2. **`projectradar.config.json`** in de projectroot — defaults voor o.a. `staleDays`, `reviewWindowDays`. Env-waarden overrulen dit bestand.
 
 Als beide ontbreken draait de app met defaults, zonder AI.
+
+### AI providers
+
+| Provider | Aanbevolen voor | Env-vars |
+|---|---|---|
+| `openrouter` | flexibel tussen modellen wisselen (Claude, GPT, Gemini, lokaal, …) | `OPENROUTER_API_KEY`, optioneel `OPENROUTER_REFERER` + `OPENROUTER_TITLE` voor je OpenRouter-dashboard |
+| `openai` | rechtstreeks OpenAI-modellen | `OPENAI_API_KEY` |
+
+Beide providers gebruiken intern de OpenAI-compatible API (OpenRouter via `https://openrouter.ai/api/v1`). Wisselen is een `.env.local`-aanpassing. AI is volledig opt-in: zonder key blijft de app werken, de AI-features verschijnen dan met een uitleg waarom ze uit staan.
 
 ## Mappenstructuur (huidig)
 

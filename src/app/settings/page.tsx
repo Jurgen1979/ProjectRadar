@@ -1,4 +1,4 @@
-import { getAiStatus, getConfigStatus } from "@/lib/config";
+import { getAiStatus, getConfigStatus, providerLabel } from "@/lib/config";
 import { DEFAULT_CONFIG } from "@/lib/schema/config";
 
 function Row({ label, value }: { label: string; value: React.ReactNode }) {
@@ -14,6 +14,7 @@ export default function SettingsPage() {
   const cfg = getConfigStatus();
   const effective = cfg.kind === "ok" ? cfg.config : DEFAULT_CONFIG;
   const ai = getAiStatus(effective);
+  const headerKeys = ai.enabled ? Object.keys(ai.headers) : [];
 
   return (
     <div className="space-y-6">
@@ -52,13 +53,16 @@ export default function SettingsPage() {
                   : "—"
             }
           />
-          <Row label="Status" value={
-            cfg.kind === "ok" ? (
-              <span className="text-emerald-700">OK</span>
-            ) : (
-              <span className="text-amber-700">{cfg.message}</span>
-            )
-          } />
+          <Row
+            label="Status"
+            value={
+              cfg.kind === "ok" ? (
+                <span className="text-emerald-700">OK</span>
+              ) : (
+                <span className="text-amber-700">{cfg.message}</span>
+              )
+            }
+          />
         </div>
       </section>
 
@@ -67,8 +71,18 @@ export default function SettingsPage() {
           AI
         </div>
         <div className="px-4">
-          <Row label="Provider" value={ai.provider} />
-          <Row label="Model" value={ai.model || <em className="text-muted-foreground">leeg</em>} />
+          <Row
+            label="Provider"
+            value={`${providerLabel(ai.provider)} (${ai.provider})`}
+          />
+          <Row
+            label="Model"
+            value={ai.model || <em className="text-muted-foreground">leeg</em>}
+          />
+          <Row
+            label="Base URL"
+            value={ai.baseURL ?? <em className="text-muted-foreground">n.v.t.</em>}
+          />
           <Row
             label="Aan/uit"
             value={
@@ -79,6 +93,20 @@ export default function SettingsPage() {
               )
             }
           />
+          {ai.enabled && headerKeys.length > 0 ? (
+            <Row
+              label="Extra headers"
+              value={
+                <ul className="space-y-0.5">
+                  {headerKeys.map((k) => (
+                    <li key={k}>
+                      <span className="text-muted-foreground">{k}:</span> {ai.headers[k]}
+                    </li>
+                  ))}
+                </ul>
+              }
+            />
+          ) : null}
         </div>
       </section>
 

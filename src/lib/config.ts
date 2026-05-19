@@ -2,7 +2,6 @@ import "server-only";
 import fs from "node:fs";
 import path from "node:path";
 import { DEFAULT_CONFIG, ProjectradarConfig } from "./schema/config";
-import type { AiProvider } from "./schema/enums";
 
 export type ConfigStatus =
   | { kind: "ok"; root: string; config: ProjectradarConfig; configPath: string | null }
@@ -10,9 +9,10 @@ export type ConfigStatus =
   | { kind: "root-missing"; root: string; message: string }
   | { kind: "config-invalid"; root: string; configPath: string; message: string };
 
-export type AiStatus =
-  | { enabled: false; reason: string; provider: AiProvider; model: string }
-  | { enabled: true; provider: Exclude<AiProvider, "none">; model: string };
+// AI-status getter lives in lib/ai/provider.ts. Re-export so existing
+// callsites keep working without an extra import.
+export { getAiStatus, providerLabel } from "@/lib/ai/provider";
+export type { AiStatus } from "@/lib/ai/provider";
 
 const CONFIG_FILENAME = "projectradar.config.json";
 
@@ -93,44 +93,4 @@ export function getConfigStatus(): ConfigStatus {
     config: loaded.config,
     configPath: loaded.configPath,
   };
-}
-
-export function getAiStatus(config: ProjectradarConfig): AiStatus {
-  const provider = (process.env.AI_PROVIDER?.trim() || config.aiProvider) as AiProvider;
-  const model = process.env.AI_MODEL?.trim() || config.model;
-
-  if (provider === "none") {
-    return { enabled: false, reason: "AI uitgeschakeld (AI_PROVIDER=none).", provider, model };
-  }
-  if (!model) {
-    return {
-      enabled: false,
-      reason: "Geen model ingesteld. Zet AI_MODEL in .env.local of model in projectradar.config.json.",
-      provider,
-      model: "",
-    };
-  }
-  const keyEnv =
-    provider === "openai"
-      ? "OPENAI_API_KEY"
-      : provider === "anthropic"
-        ? "ANTHROPIC_API_KEY"
-        : null;
-  if (!keyEnv) {
-    return {
-      enabled: false,
-      reason: `Onbekende provider: ${provider}.`,
-      provider,
-      model,
-    };
-  }
-  if (!process.env[keyEnv]?.trim()) {
-    return {
-      enabled: false,
-      reason: `Geen API key gevonden (${keyEnv}). AI-features zijn uitgeschakeld.`,
-      provider,
-      model,
-    };
-  }
-  return { enabled: true, provider, model };
 }
