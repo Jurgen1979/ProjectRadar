@@ -108,5 +108,29 @@ Checks:
 
 Volgende fase: welkomstscherm + native folder picker + persistente projectroot.
 
+### Fase 3 — First-run onboarding
+
+**Status: groen.**
+
+Gedaan:
+- `src/lib/io/detect-runtime.ts` — `isTauriRuntime()` check via `window.__TAURI_INTERNALS__`.
+- `src/lib/io/folder-picker.ts` — wrapper rond `@tauri-apps/plugin-dialog` `open({ directory: true })`. Onderscheidt "user cancelled" van een echte fout.
+- `src/components/app-config-provider.tsx` — `AppConfigProvider` React-context, laadt Tauri-store lazy (dynamic import) zodat web-builds geen Tauri-bundel meekrijgen. Exposeert `useAppConfig()` met `runtime`, `config`, `loading`, `setConfig`, `patchConfig`.
+- `src/components/tauri-welcome-guard.tsx` — wanneer Tauri-runtime + geen `projectRoot` → `router.replace("/welcome")`. `/welcome` en `/settings` zijn whitelisted.
+- `src/components/web-only.tsx` — `WebOnly` en `TauriOnly` helpers voor UI-onderdelen die per runtime moeten differen.
+- `src/app/welcome/page.tsx` — welkomstscherm met "Kies bestaande Projectradar-map" en "Maak nieuwe Projectradar-map". Beide openen de native folder picker. Na keuze: schrijft naar Tauri-store en redirect naar `/projects`.
+- `src/app/layout.tsx` — wrapt alles in `AppConfigProvider` + `TauriWelcomeGuard`. Bestaande server-side `ConfigBanner` zit nu in een `WebOnly`-wrapper.
+
+Checks:
+- `npm test` → 66/66 groen (geen testbarrière voor onboarding; component-renderen vereist DOM/Tauri, zit niet in node:test scope).
+- `npm run typecheck` schoon.
+- `npm run build` schoon — nieuwe route `/welcome` zichtbaar in route lijst.
+
+Beperking:
+- Volledige verificatie van de Tauri-flow vereist een Tauri webview (komt in Fase 4-6 build-pipeline). In dev-web mode redirect /welcome direct naar /projects omdat we geen Tauri-runtime detecteren.
+
+Volgende fase: pages naar client-flow, server actions vervangen door desktop-compatible async functies.
+
+
 
 
