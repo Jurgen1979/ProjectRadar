@@ -1,8 +1,9 @@
 "use server";
+import { serverFsIO } from "@/lib/server-io";
 
 import { revalidatePath } from "next/cache";
 import { getConfigStatus } from "@/lib/config";
-import { isSafeSlug } from "@/lib/fs/paths";
+import { isSafeSlug } from "@/lib/io/paths";
 import { addUpdate } from "@/lib/projects/add-update";
 
 export type InboxFormState = {
@@ -44,7 +45,7 @@ export async function inboxSaveAction(
   // saved file gets a sensible name like 2026-05-19-chatgpt-inbox.md.
   const title = values.title || "inbox";
 
-  const result = await addUpdate(cfg.root, values.slug, {
+  const result = await addUpdate(serverFsIO, cfg.root, values.slug, {
     title,
     bron: values.bron,
     datum: values.datum,

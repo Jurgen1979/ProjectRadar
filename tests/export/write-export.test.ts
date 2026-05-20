@@ -1,4 +1,5 @@
 import { test } from "node:test";
+import { nodeFsIO } from "../../src/lib/io/node-fs";
 import assert from "node:assert/strict";
 import fs from "node:fs/promises";
 import os from "node:os";
@@ -13,7 +14,7 @@ test("writeExport creates dir and writes content", async () => {
   const root = await tmpRoot();
   try {
     const dir = path.join(root, "exports");
-    const r = await writeExport(root, {
+    const r = await writeExport(nodeFsIO, root, {
       dir,
       baseName: "test-2030-01-01-1200",
       content: "# hi\n",
@@ -33,7 +34,7 @@ test("writeExport creates dir and writes content", async () => {
 test("writeExport refuses empty content", async () => {
   const root = await tmpRoot();
   try {
-    const r = await writeExport(root, {
+    const r = await writeExport(nodeFsIO, root, {
       dir: path.join(root, "exports"),
       baseName: "x",
       content: "   ",
@@ -48,9 +49,9 @@ test("writeExport suffixes on collision instead of overwriting", async () => {
   const root = await tmpRoot();
   try {
     const dir = path.join(root, "exports");
-    const a = await writeExport(root, { dir, baseName: "x", content: "a" });
-    const b = await writeExport(root, { dir, baseName: "x", content: "b" });
-    const c = await writeExport(root, { dir, baseName: "x", content: "c" });
+    const a = await writeExport(nodeFsIO, root, { dir, baseName: "x", content: "a" });
+    const b = await writeExport(nodeFsIO, root, { dir, baseName: "x", content: "b" });
+    const c = await writeExport(nodeFsIO, root, { dir, baseName: "x", content: "c" });
     assert.ok(a.ok && b.ok && c.ok);
     assert.equal(path.basename((a as { path: string }).path), "x.md");
     assert.equal(path.basename((b as { path: string }).path), "x-2.md");

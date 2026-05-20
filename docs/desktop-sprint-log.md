@@ -47,3 +47,41 @@ Afwijking van plan:
 
 Volgende fase: IO-laag migreren naar Tauri-fs. Pure parsers/schemas/templates blijven 1-op-1.
 
+### Fase 1 — IO-laag migreren
+
+**Status: groen.**
+
+Architectuur:
+- Nieuwe `src/lib/io/types.ts` introduceert `FsIO` interface: read/write/stat/exists/mkdir/copyDir + sync path helpers (join/basename/dirname).
+- Twee implementaties: `nodeFsIO` (node:fs/promises, voor tests + server actions + dev-mode) en `tauriFsIO` (@tauri-apps/plugin-fs, voor desktop straks).
+- `tauriFsIO` wordt alléén in client-context geïmporteerd; tests blijven werken zonder Tauri.
+- Nieuwe `src/lib/io/paths.ts` met browser-safe slug-validatie, path-join, dirname/basename en `resolveUnderRoot` voor traversal-bescherming. Handelt Windows-drive-letters en forward/backward slashes.
+- Oude `src/lib/fs/` verwijderd — geen callsites meer.
+
+Loaders/writers refactored om `FsIO` als eerste parameter te nemen:
+- `loadProject`, `loadAllProjects`, `loadDashboardData`
+- `createProject`, `addUpdate`, `updateProjectMeta`
+- `recoverFile`, `recoverFolders`, `detectMissing`, `previewRecoveryContent`
+- `saveStatusWithBackup`
+- `seedDemoProject` (krijgt nu ook expliciet `sourceDir` zodat Tauri later z'n eigen resource-pad kan kiezen)
+- `buildReviewData`
+- `writeExport`
+- `gatherStatusContext`
+- `generateStatus`, `generateReview` krijgen ook een `AiCallConfig` parameter (provider + model + baseURL + key + headers) zodat de caller bepaalt waar die vandaan komt
+
+`generateStatus`/`generateReview` zelf doen geen env-lookup meer. Server actions resolven via nieuwe `src/lib/server-io.ts` helper (`serverFsIO` + `resolveServerAi`). Tauri-client zal dit straks via app-config doen.
+
+Alle server actions en pages bijgewerkt om `serverFsIO` mee te geven. Alle tests bijgewerkt om `nodeFsIO` mee te geven.
+
+Checks:
+- `npm test` → **57/57 groen** (zelfde testsuite als v1, alle paden gemigreerd).
+- `npm run typecheck` schoon.
+- `npm run build` schoon (alle 12 routes dynamic).
+- Geen `server-only` markers meer in lib/projects/* of lib/ai/* of lib/export/* — alleen `src/lib/server-io.ts` blijft server-only.
+
+Risico/afwijking:
+- `tauri-fs.ts` import (van `@tauri-apps/plugin-fs`) zit nu in de codebase maar wordt alleen vanuit client-context (Fase 4) geïmporteerd. Build slaagt omdat geen enkel server-side bestand het importeert.
+
+Volgende fase: app-config naar Tauri store + first-run flow zonder env-var.
+
+

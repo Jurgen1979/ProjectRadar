@@ -1,4 +1,5 @@
 import { test } from "node:test";
+import { nodeFsIO } from "../../src/lib/io/node-fs";
 import assert from "node:assert/strict";
 import fs from "node:fs/promises";
 import os from "node:os";
@@ -10,7 +11,7 @@ import { DEFAULT_CONFIG } from "../../src/lib/schema/config";
 
 async function makeProjectWithUpdates(count: number) {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), "projectradar-gather-"));
-  await createProject(root, {
+  await createProject(nodeFsIO, root, {
     slug: "p",
     name: "Test Project",
     client: "intern",
@@ -25,7 +26,7 @@ async function makeProjectWithUpdates(count: number) {
   });
   for (let i = 0; i < count; i++) {
     const day = String(i + 1).padStart(2, "0");
-    await addUpdate(root, "p", {
+    await addUpdate(nodeFsIO, root, "p", {
       title: `update ${i + 1}`,
       bron: "ChatGPT",
       datum: `2030-01-${day}`,
@@ -38,7 +39,7 @@ async function makeProjectWithUpdates(count: number) {
 test("gatherStatusContext respects maxUpdatesForStatusGeneration", async () => {
   const root = await makeProjectWithUpdates(15);
   try {
-    const ctx = await gatherStatusContext(root, "p", {
+    const ctx = await gatherStatusContext(nodeFsIO, root, "p", {
       ...DEFAULT_CONFIG,
       maxUpdatesForStatusGeneration: 5,
     });
@@ -56,7 +57,7 @@ test("gatherStatusContext respects maxUpdatesForStatusGeneration", async () => {
 test("gatherStatusContext fills meta/status/log/decisions strings", async () => {
   const root = await makeProjectWithUpdates(1);
   try {
-    const ctx = await gatherStatusContext(root, "p", DEFAULT_CONFIG);
+    const ctx = await gatherStatusContext(nodeFsIO, root, "p", DEFAULT_CONFIG);
     assert.equal(ctx.projectName, "Test Project");
     assert.ok(ctx.metaJson.includes('"id": "p"'));
     assert.ok(ctx.status.startsWith("# projectstatus"));
@@ -72,7 +73,7 @@ test("gatherStatusContext throws when meta is missing", async () => {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), "projectradar-gather-"));
   await fs.mkdir(path.join(root, "projects", "p"), { recursive: true });
   try {
-    await assert.rejects(() => gatherStatusContext(root, "p", DEFAULT_CONFIG));
+    await assert.rejects(() => gatherStatusContext(nodeFsIO, root, "p", DEFAULT_CONFIG));
   } finally {
     await fs.rm(root, { recursive: true, force: true });
   }
@@ -87,7 +88,7 @@ test("gatherStatusContext truncates a single huge update", async () => {
       path.join(root, "projects", "p", "updates", "2030-01-01-bron-huge.md"),
       `# u\n## datum\n2030-01-01\n${huge}`,
     );
-    const ctx = await gatherStatusContext(root, "p", DEFAULT_CONFIG);
+    const ctx = await gatherStatusContext(nodeFsIO, root, "p", DEFAULT_CONFIG);
     assert.ok(ctx.truncatedUpdates.includes("2030-01-01-bron-huge.md"));
     assert.ok(ctx.truncationNote);
     assert.ok(

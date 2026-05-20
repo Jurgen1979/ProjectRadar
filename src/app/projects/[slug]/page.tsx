@@ -1,9 +1,9 @@
-import fs from "node:fs/promises";
 import { notFound } from "next/navigation";
 import { getConfigStatus } from "@/lib/config";
 import { loadProject } from "@/lib/projects/load-one";
 import { computeSignals } from "@/lib/projects/signals";
-import { isSafeSlug, projectDir } from "@/lib/fs/paths";
+import { isSafeSlug, projectDir } from "@/lib/io/paths";
+import { serverFsIO } from "@/lib/server-io";
 import { NoRootState } from "@/components/projects/empty-state";
 import { ProjectHeader } from "@/components/projects/detail/header";
 import { WarningsBanner } from "@/components/projects/detail/warnings-banner";
@@ -33,15 +33,10 @@ export default async function ProjectDetailPage({
   // 404 cleanly when the project directory doesn't exist at all,
   // so we don't confuse "ontbreekt op disk" with "meta corrupt".
   const dir = projectDir(cfg.root, slug);
-  try {
-    const stat = await fs.stat(dir);
-    if (!stat.isDirectory()) notFound();
-  } catch (err) {
-    if ((err as NodeJS.ErrnoException).code === "ENOENT") notFound();
-    throw err;
-  }
+  const dirStat = await serverFsIO.stat(dir);
+  if (!dirStat || !dirStat.isDirectory) notFound();
 
-  const result = await loadProject(cfg.root, slug);
+  const result = await loadProject(serverFsIO, cfg.root, slug);
   if (!result.ok) {
     return (
       <div className="space-y-4">
@@ -63,11 +58,11 @@ export default async function ProjectDetailPage({
 
   const { project } = result;
   const signals = computeSignals(project, { staleDays: cfg.config.staleDays });
-  const missing = await detectMissing(cfg.root, slug);
+  const missing = await detectMissing(serverFsIO, cfg.root, slug);
   const previews = await Promise.all(
     missing.files.map(async (file) => ({
       file,
-      preview: await previewRecoveryContent(cfg.root, slug, file),
+      preview: await previewRecoveryContent(serverFsIO, cfg.root, slug, file),
     })),
   );
 

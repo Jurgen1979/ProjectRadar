@@ -1,4 +1,5 @@
 "use server";
+import { serverFsIO } from "@/lib/server-io";
 
 import path from "node:path";
 import { revalidatePath } from "next/cache";
@@ -23,13 +24,13 @@ export async function exportDashboardAction(
   const cfg = getConfigStatus();
   if (cfg.kind !== "ok") return { error: cfg.message };
 
-  const data = await loadDashboardData(cfg.root, cfg.config);
+  const data = await loadDashboardData(serverFsIO, cfg.root, cfg.config);
   const content = renderDashboardMarkdown({
     data,
     generatedAt: new Date(),
   });
 
-  const result = await writeExport(cfg.root, {
+  const result = await writeExport(serverFsIO, cfg.root, {
     dir: rootExportsDir(cfg.root),
     baseName: `dashboard-${timestamp()}`,
     content,

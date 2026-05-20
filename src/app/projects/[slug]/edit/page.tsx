@@ -1,8 +1,8 @@
-import fs from "node:fs/promises";
 import { notFound } from "next/navigation";
 import { getConfigStatus } from "@/lib/config";
-import { isSafeSlug, projectDir } from "@/lib/fs/paths";
+import { isSafeSlug, projectDir } from "@/lib/io/paths";
 import { loadProject } from "@/lib/projects/load-one";
+import { serverFsIO } from "@/lib/server-io";
 import { NoRootState } from "@/components/projects/empty-state";
 import { EditMetaForm } from "./form";
 import { WarningsBanner } from "@/components/projects/detail/warnings-banner";
@@ -18,15 +18,10 @@ export default async function EditProjectPage({
   const cfg = getConfigStatus();
   if (cfg.kind !== "ok") return <NoRootState message={cfg.message} />;
 
-  try {
-    const stat = await fs.stat(projectDir(cfg.root, slug));
-    if (!stat.isDirectory()) notFound();
-  } catch (err) {
-    if ((err as NodeJS.ErrnoException).code === "ENOENT") notFound();
-    throw err;
-  }
+  const dirStat = await serverFsIO.stat(projectDir(cfg.root, slug));
+  if (!dirStat || !dirStat.isDirectory) notFound();
 
-  const result = await loadProject(cfg.root, slug);
+  const result = await loadProject(serverFsIO, cfg.root, slug);
   if (!result.ok) {
     return (
       <div className="space-y-4">

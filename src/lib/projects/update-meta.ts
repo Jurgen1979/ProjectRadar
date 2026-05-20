@@ -1,8 +1,5 @@
-import "server-only";
-import fs from "node:fs/promises";
-import path from "node:path";
-import { atomicWrite } from "@/lib/fs/atomic-write";
-import { projectDir } from "@/lib/fs/paths";
+import { projectDir } from "@/lib/io/paths";
+import type { FsIO } from "@/lib/io/types";
 import { ProjectMeta } from "@/lib/schema/meta";
 import { serializeMeta } from "@/lib/serialize/meta";
 
@@ -24,6 +21,7 @@ export type UpdateMetaResult =
   | { ok: false; message: string; field?: string };
 
 export async function updateProjectMeta(
+  io: FsIO,
   root: string,
   slug: string,
   input: UpdateMetaInput,
@@ -33,32 +31,30 @@ export async function updateProjectMeta(
   }
 
   const dir = projectDir(root, slug);
-  const metaPath = path.join(dir, "project.meta.json");
+  const metaPath = io.join(dir, "project.meta.json");
 
-  let existing: ProjectMeta;
-  try {
-    const raw = await fs.readFile(metaPath, "utf8");
-    const parsed = JSON.parse(raw);
-    const result = ProjectMeta.safeParse(parsed);
-    if (!result.success) {
-      return {
-        ok: false,
-        message: `Huidige meta is ongeldig: ${result.error.issues
-          .map((i) => `${i.path.join(".")}: ${i.message}`)
-          .join("; ")}`,
-      };
-    }
-    existing = result.data;
-  } catch (err) {
-    const e = err as NodeJS.ErrnoException;
-    if (e.code === "ENOENT") {
-      return { ok: false, message: "project.meta.json ontbreekt." };
-    }
-    if (err instanceof SyntaxError) {
-      return { ok: false, message: `Ongeldige JSON: ${err.message}` };
-    }
-    throw err;
+  const raw = await io.readText(metaPath);
+  if (raw === null) {
+    return { ok: false, message: "project.meta.json ontbreekt." };
   }
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch (err) {
+    return { ok: false, message: `Ongeldige JSON: ${(err as Error).message}` };
+  }
+
+  const result = ProjectMeta.safeParse(parsed);
+  if (!result.success) {
+    return {
+      ok: false,
+      message: `Huidige meta is ongeldig: ${result.error.issues
+        .map((i) => `${i.path.join(".")}: ${i.message}`)
+        .join("; ")}`,
+    };
+  }
+  const existing = result.data;
 
   // Preserve id (slug == folder name), createdAt and lastUpdated.
   // Editing metadata is not a content change, so we don't bump lastUpdated.
@@ -76,6 +72,6 @@ export async function updateProjectMeta(
     riskLevel: input.riskLevel,
   });
 
-  await atomicWrite(metaPath, serializeMeta(next));
+  await io.atomicWriteText(metaPath, serializeMeta(next));
   return { ok: true, meta: next };
 }

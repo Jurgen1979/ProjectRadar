@@ -1,8 +1,5 @@
-import "server-only";
-import fs from "node:fs/promises";
-import path from "node:path";
-import { atomicWrite } from "@/lib/fs/atomic-write";
-import { projectDir, toSlug } from "@/lib/fs/paths";
+import { projectDir, toSlug } from "@/lib/io/paths";
+import type { FsIO } from "@/lib/io/types";
 import { ProjectMeta } from "@/lib/schema/meta";
 import { serializeMeta } from "@/lib/serialize/meta";
 import { updateTemplate } from "@/lib/serialize/templates";
@@ -38,6 +35,7 @@ function sanitizeBronForFilename(bron: string): string {
 }
 
 export async function addUpdate(
+  io: FsIO,
   root: string,
   slug: string,
   input: AddUpdateInput,
@@ -52,36 +50,37 @@ export async function addUpdate(
   const bron = input.bron.trim() || "eigen notitie";
 
   const dir = projectDir(root, slug);
-  const updatesDir = path.join(dir, "updates");
+  const updatesDir = io.join(dir, "updates");
 
-  // Project must exist.
-  try {
-    await fs.access(path.join(dir, "project.meta.json"));
-  } catch {
+  if (!(await io.exists(io.join(dir, "project.meta.json")))) {
     return { ok: false, message: `Project ${slug} bestaat niet.` };
   }
-  await fs.mkdir(updatesDir, { recursive: true });
+  await io.mkdir(updatesDir, { recursive: true });
 
   const titleSlug = toSlug(title) || "update";
   const bronSlug = sanitizeBronForFilename(bron);
   const base = `${input.datum}-${bronSlug}-${titleSlug}`;
-  const filename = await uniqueFilename(updatesDir, base);
-  const filePath = path.join(updatesDir, filename);
+  const filename = await uniqueFilename(io, updatesDir, base);
+  const filePath = io.join(updatesDir, filename);
 
   const content = input.raw
     ? `# projectupdate – ${title}\n\n${body}\n`
     : updateTemplate({ title, datum: input.datum, bron, body });
 
-  await atomicWrite(filePath, content);
-  await bumpLastUpdated(dir, input.datum);
+  await io.atomicWriteText(filePath, content);
+  await bumpLastUpdated(io, dir, input.datum);
 
   return { ok: true, filename, path: filePath };
 }
 
-async function uniqueFilename(dir: string, base: string): Promise<string> {
+async function uniqueFilename(
+  io: FsIO,
+  dir: string,
+  base: string,
+): Promise<string> {
   let candidate = `${base}.md`;
   let n = 2;
-  while (await pathExists(path.join(dir, candidate))) {
+  while (await io.exists(io.join(dir, candidate))) {
     candidate = `${base}-${n}.md`;
     n++;
     if (n > 99) throw new Error("Te veel updates met dezelfde naam vandaag.");
@@ -89,23 +88,14 @@ async function uniqueFilename(dir: string, base: string): Promise<string> {
   return candidate;
 }
 
-async function pathExists(p: string): Promise<boolean> {
-  try {
-    await fs.access(p);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-async function bumpLastUpdated(dir: string, date: string): Promise<void> {
-  const metaPath = path.join(dir, "project.meta.json");
-  let raw: string;
-  try {
-    raw = await fs.readFile(metaPath, "utf8");
-  } catch {
-    return;
-  }
+async function bumpLastUpdated(
+  io: FsIO,
+  dir: string,
+  date: string,
+): Promise<void> {
+  const metaPath = io.join(dir, "project.meta.json");
+  const raw = await io.readText(metaPath);
+  if (raw === null) return;
   let parsed: unknown;
   try {
     parsed = JSON.parse(raw);
@@ -116,7 +106,7 @@ async function bumpLastUpdated(dir: string, date: string): Promise<void> {
   if (!result.success) return;
   if (result.data.lastUpdated && result.data.lastUpdated >= date) return;
   const next = { ...result.data, lastUpdated: date };
-  await atomicWrite(metaPath, serializeMeta(next));
+  await io.atomicWriteText(metaPath, serializeMeta(next));
 }
 
 export const UPDATE_SOURCES = KNOWN_SOURCES;

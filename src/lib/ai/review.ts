@@ -1,10 +1,8 @@
-import "server-only";
-import fs from "node:fs/promises";
-import path from "node:path";
 import { generateText } from "ai";
 import { createOpenAI } from "@ai-sdk/openai";
-import { getAiStatus, resolveApiKey } from "@/lib/ai/provider";
-import { projectDir } from "@/lib/fs/paths";
+import type { AiCallConfig } from "@/lib/ai/generate-status";
+import { projectDir } from "@/lib/io/paths";
+import type { FsIO } from "@/lib/io/types";
 import { loadAllProjects } from "@/lib/projects/load-all";
 import { computeSignals } from "@/lib/projects/signals";
 import type { ProjectradarConfig } from "@/lib/schema/config";
@@ -61,17 +59,15 @@ export type GenerateReviewOk = {
 export type GenerateReviewErr = { ok: false; message: string };
 export type GenerateReviewResult = GenerateReviewOk | GenerateReviewErr;
 
-async function readStatusExcerpt(root: string, slug: string): Promise<string> {
-  try {
-    const raw = await fs.readFile(
-      path.join(projectDir(root, slug), "project-status.md"),
-      "utf8",
-    );
-    if (raw.length <= PER_PROJECT_STATUS_BUDGET) return raw;
-    return raw.slice(0, PER_PROJECT_STATUS_BUDGET) + "\n[…afgekapt…]";
-  } catch {
-    return "(geen project-status.md)";
-  }
+async function readStatusExcerpt(
+  io: FsIO,
+  root: string,
+  slug: string,
+): Promise<string> {
+  const raw = await io.readText(io.join(projectDir(root, slug), "project-status.md"));
+  if (raw === null) return "(geen project-status.md)";
+  if (raw.length <= PER_PROJECT_STATUS_BUDGET) return raw;
+  return raw.slice(0, PER_PROJECT_STATUS_BUDGET) + "\n[…afgekapt…]";
 }
 
 function renderProjectBlock(p: ReviewProjectInput): string {
@@ -127,25 +123,17 @@ ${blocks}
 }
 
 export async function generateReview(
+  io: FsIO,
   root: string,
   config: ProjectradarConfig,
+  ai: AiCallConfig,
 ): Promise<GenerateReviewResult> {
-  const ai = getAiStatus(config);
-  if (!ai.enabled) {
-    return { ok: false, message: `AI staat uit: ${ai.reason}` };
-  }
-  const apiKey = resolveApiKey(ai.provider);
-  if (!apiKey) {
-    return { ok: false, message: `Geen API key voor ${ai.provider}.` };
-  }
-
-  const idx = await loadAllProjects(root);
+  const idx = await loadAllProjects(io, root);
   const active = idx.projects.filter((p) => p.meta.status === "active");
   if (active.length === 0) {
     return { ok: false, message: "Geen actieve projecten om te reviewen." };
   }
 
-  // Sort: oldest first so the most urgent stuff stays even when truncated.
   active.sort((a, b) => {
     const aTs = a.meta.lastUpdated ?? "";
     const bTs = b.meta.lastUpdated ?? "";
@@ -158,7 +146,7 @@ export async function generateReview(
 
   for (const p of active) {
     const sig = computeSignals(p, { staleDays: config.staleDays });
-    const excerpt = await readStatusExcerpt(root, p.slug);
+    const excerpt = await readStatusExcerpt(io, root, p.slug);
     const block: ReviewProjectInput = {
       name: p.meta.name,
       slug: p.slug,
@@ -199,7 +187,7 @@ export async function generateReview(
 
   const userPrompt = buildReviewPrompt(inputs);
   const provider = createOpenAI({
-    apiKey,
+    apiKey: ai.apiKey,
     baseURL: ai.baseURL,
     headers: ai.headers,
   });

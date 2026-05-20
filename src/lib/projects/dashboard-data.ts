@@ -1,4 +1,4 @@
-import "server-only";
+import type { FsIO } from "@/lib/io/types";
 import type { ProjectradarConfig } from "@/lib/schema/config";
 import { loadAllProjects } from "@/lib/projects/load-all";
 import { computeSignals, type Signal } from "@/lib/projects/signals";
@@ -67,10 +67,11 @@ function buildCard(project: Project, staleDays: number): DashboardCard {
 }
 
 export async function loadDashboardData(
+  io: FsIO,
   root: string,
   config: ProjectradarConfig,
 ): Promise<DashboardData> {
-  const idx = await loadAllProjects(root);
+  const idx = await loadAllProjects(io, root);
   return {
     cards: idx.projects.map((p) => buildCard(p, config.staleDays)),
     broken: idx.broken,

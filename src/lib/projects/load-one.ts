@@ -1,7 +1,5 @@
-import "server-only";
-import fs from "node:fs/promises";
-import path from "node:path";
-import { projectDir } from "@/lib/fs/paths";
+import { projectDir } from "@/lib/io/paths";
+import type { FsIO } from "@/lib/io/types";
 import { ProjectMeta } from "@/lib/schema/meta";
 import { parseProjectStatus } from "@/lib/parse/project-status";
 import { parseProjectLinks } from "@/lib/parse/project-links";
@@ -16,39 +14,28 @@ const LINKS_FILE = "project-links.md";
 const LOG_FILE = "project-log.md";
 const DECISIONS_FILE = "decision-log.md";
 
-async function readUtf8(p: string): Promise<string | null> {
-  try {
-    return await fs.readFile(p, "utf8");
-  } catch (err) {
-    if ((err as NodeJS.ErrnoException).code === "ENOENT") return null;
-    throw err;
-  }
-}
-
-async function readUpdates(dir: string): Promise<{ updates: UpdateFile[]; warnings: ProjectWarning[] }> {
-  const updatesDir = path.join(dir, "updates");
-  const warnings: ProjectWarning[] = [];
-  let entries: import("node:fs").Dirent[];
-  try {
-    entries = await fs.readdir(updatesDir, { withFileTypes: true });
-  } catch (err) {
-    if ((err as NodeJS.ErrnoException).code === "ENOENT") {
-      return { updates: [], warnings: [] };
-    }
-    throw err;
-  }
+async function readUpdates(
+  io: FsIO,
+  dir: string,
+): Promise<{ updates: UpdateFile[]; warnings: ProjectWarning[] }> {
+  const updatesDir = io.join(dir, "updates");
+  const entries = await io.readDir(updatesDir);
   const updates: UpdateFile[] = [];
+  const warnings: ProjectWarning[] = [];
   for (const e of entries) {
-    if (!e.isFile()) continue;
+    if (!e.isFile) continue;
     if (!e.name.toLowerCase().endsWith(".md")) continue;
-    const full = path.join(updatesDir, e.name);
+    const full = io.join(updatesDir, e.name);
     try {
-      const [raw, stat] = await Promise.all([fs.readFile(full, "utf8"), fs.stat(full)]);
-      updates.push(parseUpdate({ raw, filename: e.name, mtime: stat.mtimeMs }));
+      const [raw, stat] = await Promise.all([io.readText(full), io.stat(full)]);
+      if (raw === null) continue;
+      updates.push(
+        parseUpdate({ raw, filename: e.name, mtime: stat?.mtimeMs ?? 0 }),
+      );
     } catch (err) {
       warnings.push({
         level: "warning",
-        file: path.posix.join("updates", e.name),
+        file: `updates/${e.name}`,
         message: `Kon updatebestand niet lezen: ${(err as Error).message}`,
       });
     }
@@ -62,27 +49,25 @@ async function readUpdates(dir: string): Promise<{ updates: UpdateFile[]; warnin
   return { updates, warnings };
 }
 
-async function listSources(dir: string): Promise<string[]> {
-  const sourcesDir = path.join(dir, "sources");
-  try {
-    const entries = await fs.readdir(sourcesDir, { withFileTypes: true });
-    return entries.filter((e) => e.isFile()).map((e) => e.name).sort();
-  } catch (err) {
-    if ((err as NodeJS.ErrnoException).code === "ENOENT") return [];
-    throw err;
-  }
+async function listSources(io: FsIO, dir: string): Promise<string[]> {
+  const sourcesDir = io.join(dir, "sources");
+  const entries = await io.readDir(sourcesDir);
+  return entries.filter((e) => e.isFile).map((e) => e.name).sort();
 }
 
 export type LoadProjectResult =
   | { ok: true; project: Project }
   | { ok: false; slug: string; dir: string; warnings: ProjectWarning[] };
 
-export async function loadProject(root: string, slug: string): Promise<LoadProjectResult> {
+export async function loadProject(
+  io: FsIO,
+  root: string,
+  slug: string,
+): Promise<LoadProjectResult> {
   const dir = projectDir(root, slug);
   const warnings: ProjectWarning[] = [];
 
-  // Meta is the only required file. Without it we can't build a Project.
-  const metaRaw = await readUtf8(path.join(dir, META_FILE));
+  const metaRaw = await io.readText(io.join(dir, META_FILE));
   if (metaRaw === null) {
     return {
       ok: false,
@@ -136,10 +121,10 @@ export async function loadProject(root: string, slug: string): Promise<LoadProje
   const meta = metaResult.data;
 
   const [statusRaw, linksRaw, logRaw, decisionsRaw] = await Promise.all([
-    readUtf8(path.join(dir, STATUS_FILE)),
-    readUtf8(path.join(dir, LINKS_FILE)),
-    readUtf8(path.join(dir, LOG_FILE)),
-    readUtf8(path.join(dir, DECISIONS_FILE)),
+    io.readText(io.join(dir, STATUS_FILE)),
+    io.readText(io.join(dir, LINKS_FILE)),
+    io.readText(io.join(dir, LOG_FILE)),
+    io.readText(io.join(dir, DECISIONS_FILE)),
   ]);
 
   if (statusRaw === null) {
@@ -150,31 +135,19 @@ export async function loadProject(root: string, slug: string): Promise<LoadProje
     });
   }
   if (linksRaw === null) {
-    warnings.push({
-      level: "info",
-      file: LINKS_FILE,
-      message: "project-links.md ontbreekt.",
-    });
+    warnings.push({ level: "info", file: LINKS_FILE, message: "project-links.md ontbreekt." });
   }
   if (logRaw === null) {
-    warnings.push({
-      level: "info",
-      file: LOG_FILE,
-      message: "project-log.md ontbreekt.",
-    });
+    warnings.push({ level: "info", file: LOG_FILE, message: "project-log.md ontbreekt." });
   }
   if (decisionsRaw === null) {
-    warnings.push({
-      level: "info",
-      file: DECISIONS_FILE,
-      message: "decision-log.md ontbreekt.",
-    });
+    warnings.push({ level: "info", file: DECISIONS_FILE, message: "decision-log.md ontbreekt." });
   }
 
-  const { updates, warnings: updateWarnings } = await readUpdates(dir);
+  const { updates, warnings: updateWarnings } = await readUpdates(io, dir);
   warnings.push(...updateWarnings);
 
-  const sources = await listSources(dir);
+  const sources = await listSources(io, dir);
 
   return {
     ok: true,

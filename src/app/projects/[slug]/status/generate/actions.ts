@@ -3,12 +3,12 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getConfigStatus } from "@/lib/config";
-import { isSafeSlug } from "@/lib/fs/paths";
+import { isSafeSlug } from "@/lib/io/paths";
 import { generateStatus } from "@/lib/ai/generate-status";
 import { saveStatusWithBackup } from "@/lib/projects/save-status";
+import { resolveServerAi, serverFsIO } from "@/lib/server-io";
 
 export type GenerateState = {
-  /** Markdown text last produced by the AI. */
   proposal?: string;
   truncationNote?: string | null;
   meta?: {
@@ -34,9 +34,21 @@ export async function generateStatusAction(
   const cfg = getConfigStatus();
   if (cfg.kind !== "ok") return { error: cfg.message };
 
-  const result = await generateStatus(cfg.root, slug, cfg.config);
+  const ai = resolveServerAi(cfg.config);
+  if (!ai.enabled) return { error: `AI staat uit: ${ai.reason}` };
+
+  const result = await generateStatus(
+    serverFsIO,
+    cfg.root,
+    slug,
+    cfg.config,
+    ai.ai,
+  );
   if (!result.ok) {
-    return { error: result.message, truncationNote: result.truncationNote ?? undefined };
+    return {
+      error: result.message,
+      truncationNote: result.truncationNote ?? undefined,
+    };
   }
   return {
     proposal: result.text,
@@ -64,9 +76,13 @@ export async function approveStatusAction(
     return { error: "Geen status om op te slaan." };
   }
 
-  const result = await saveStatusWithBackup(cfg.root, slug, proposal, {
-    backup: cfg.config.backupOnStatusOverwrite,
-  });
+  const result = await saveStatusWithBackup(
+    serverFsIO,
+    cfg.root,
+    slug,
+    proposal,
+    { backup: cfg.config.backupOnStatusOverwrite },
+  );
   if (!result.ok) {
     return { error: result.message };
   }

@@ -1,7 +1,5 @@
-import "server-only";
-import fs from "node:fs/promises";
-import path from "node:path";
-import { isSafeSlug, resolveUnderRoot } from "@/lib/fs/paths";
+import { isSafeSlug, joinPath, resolveUnderRoot } from "@/lib/io/paths";
+import type { FsIO } from "@/lib/io/types";
 import { loadProject, type LoadProjectResult } from "./load-one";
 import type { Project, ProjectWarning } from "@/types/project";
 
@@ -17,21 +15,16 @@ export type ProjectsIndex = {
   skipped: string[];
 };
 
-async function listProjectSlugs(root: string): Promise<{ slugs: string[]; skipped: string[] }> {
+async function listProjectSlugs(
+  io: FsIO,
+  root: string,
+): Promise<{ slugs: string[]; skipped: string[] }> {
   const projectsDir = resolveUnderRoot(root, "projects");
-  let entries: import("node:fs").Dirent[];
-  try {
-    entries = await fs.readdir(projectsDir, { withFileTypes: true });
-  } catch (err) {
-    if ((err as NodeJS.ErrnoException).code === "ENOENT") {
-      return { slugs: [], skipped: [] };
-    }
-    throw err;
-  }
+  const entries = await io.readDir(projectsDir);
   const slugs: string[] = [];
   const skipped: string[] = [];
   for (const e of entries) {
-    if (!e.isDirectory()) continue;
+    if (!e.isDirectory) continue;
     if (e.name.startsWith(".")) continue;
     if (!isSafeSlug(e.name)) {
       skipped.push(e.name);
@@ -43,9 +36,14 @@ async function listProjectSlugs(root: string): Promise<{ slugs: string[]; skippe
   return { slugs, skipped };
 }
 
-export async function loadAllProjects(root: string): Promise<ProjectsIndex> {
-  const { slugs, skipped } = await listProjectSlugs(root);
-  const results = await Promise.all(slugs.map((slug) => safeLoad(root, slug)));
+export async function loadAllProjects(
+  io: FsIO,
+  root: string,
+): Promise<ProjectsIndex> {
+  const { slugs, skipped } = await listProjectSlugs(io, root);
+  const results = await Promise.all(
+    slugs.map((slug) => safeLoad(io, root, slug)),
+  );
 
   const projects: Project[] = [];
   const broken: ProjectsIndex["broken"] = [];
@@ -67,14 +65,18 @@ export async function loadAllProjects(root: string): Promise<ProjectsIndex> {
   return { projects, broken, skipped };
 }
 
-async function safeLoad(root: string, slug: string): Promise<LoadProjectResult> {
+async function safeLoad(
+  io: FsIO,
+  root: string,
+  slug: string,
+): Promise<LoadProjectResult> {
   try {
-    return await loadProject(root, slug);
+    return await loadProject(io, root, slug);
   } catch (err) {
     return {
       ok: false,
       slug,
-      dir: path.join(root, "projects", slug),
+      dir: joinPath(root, "projects", slug),
       warnings: [
         {
           level: "error",

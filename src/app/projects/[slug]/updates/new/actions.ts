@@ -1,10 +1,11 @@
 "use server";
+import { serverFsIO } from "@/lib/server-io";
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getConfigStatus } from "@/lib/config";
 import { addUpdate } from "@/lib/projects/add-update";
-import { isSafeSlug } from "@/lib/fs/paths";
+import { isSafeSlug } from "@/lib/io/paths";
 
 export type AddUpdateFormState = {
   error?: string;
@@ -34,7 +35,7 @@ export async function addUpdateAction(
     raw: formData.get("raw") === "on",
   };
 
-  const result = await addUpdate(cfg.root, slug, {
+  const result = await addUpdate(serverFsIO, cfg.root, slug, {
     title: values.title,
     bron: values.bron,
     datum: values.datum,

@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
-import fs from "node:fs/promises";
 import { getConfigStatus } from "@/lib/config";
-import { isSafeSlug, projectDir } from "@/lib/fs/paths";
+import { isSafeSlug, projectDir } from "@/lib/io/paths";
+import { serverFsIO } from "@/lib/server-io";
 import { NoRootState } from "@/components/projects/empty-state";
 import { AddUpdateForm } from "./form";
 
@@ -16,11 +16,7 @@ export default async function NewUpdatePage({
   const cfg = getConfigStatus();
   if (cfg.kind !== "ok") return <NoRootState message={cfg.message} />;
 
-  try {
-    await fs.access(projectDir(cfg.root, slug));
-  } catch {
-    notFound();
-  }
+  if (!(await serverFsIO.exists(projectDir(cfg.root, slug)))) notFound();
 
   const today = new Date().toISOString().slice(0, 10);
 

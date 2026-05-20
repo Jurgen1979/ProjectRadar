@@ -1,4 +1,5 @@
 import { test } from "node:test";
+import { nodeFsIO } from "../../src/lib/io/node-fs";
 import assert from "node:assert/strict";
 import fs from "node:fs/promises";
 import os from "node:os";
@@ -8,7 +9,7 @@ import { updateProjectMeta } from "../../src/lib/projects/update-meta";
 
 async function makeProject() {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), "projectradar-meta-"));
-  await createProject(root, {
+  await createProject(nodeFsIO, root, {
     slug: "demo",
     name: "Demo",
     client: "intern",
@@ -30,7 +31,7 @@ test("updateProjectMeta writes new values, preserves id and createdAt", async ()
     const metaPath = path.join(root, "projects", "demo", "project.meta.json");
     const before = JSON.parse(await fs.readFile(metaPath, "utf8"));
 
-    const r = await updateProjectMeta(root, "demo", {
+    const r = await updateProjectMeta(nodeFsIO, root, "demo", {
       name: "Demo (hernoemd)",
       client: "Acme BV",
       type: "klant",
@@ -61,7 +62,7 @@ test("updateProjectMeta writes new values, preserves id and createdAt", async ()
 test("updateProjectMeta refuses empty name", async () => {
   const root = await makeProject();
   try {
-    const r = await updateProjectMeta(root, "demo", {
+    const r = await updateProjectMeta(nodeFsIO, root, "demo", {
       name: "   ",
       client: "x",
       type: "x",
@@ -87,7 +88,7 @@ test("updateProjectMeta reports bad JSON instead of crashing", async () => {
       path.join(root, "projects", "demo", "project.meta.json"),
       "{ niet valide",
     );
-    const r = await updateProjectMeta(root, "demo", {
+    const r = await updateProjectMeta(nodeFsIO, root, "demo", {
       name: "ok",
       client: "intern",
       type: "demo",

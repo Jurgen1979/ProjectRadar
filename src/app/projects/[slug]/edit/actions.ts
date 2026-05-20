@@ -1,9 +1,10 @@
 "use server";
+import { serverFsIO } from "@/lib/server-io";
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getConfigStatus } from "@/lib/config";
-import { isSafeSlug } from "@/lib/fs/paths";
+import { isSafeSlug } from "@/lib/io/paths";
 import { updateProjectMeta } from "@/lib/projects/update-meta";
 import type { ProjectMeta } from "@/lib/schema/meta";
 
@@ -65,7 +66,7 @@ export async function editMetaAction(
     tags: String(formData.get("tags") ?? "").trim(),
   };
 
-  const result = await updateProjectMeta(cfg.root, slug, {
+  const result = await updateProjectMeta(serverFsIO, cfg.root, slug, {
     name: values.name,
     client: values.client,
     type: values.type,

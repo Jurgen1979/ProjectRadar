@@ -1,9 +1,10 @@
 "use server";
+import { serverFsIO } from "@/lib/server-io";
 
 import path from "node:path";
 import { revalidatePath } from "next/cache";
 import { getConfigStatus } from "@/lib/config";
-import { isSafeSlug, projectDir } from "@/lib/fs/paths";
+import { isSafeSlug, projectDir } from "@/lib/io/paths";
 import { loadProject } from "@/lib/projects/load-one";
 import { renderProjectMarkdown } from "@/lib/export/project-md";
 import { timestamp, writeExport } from "@/lib/export/write-export";
@@ -22,7 +23,7 @@ export async function exportProjectAction(
   const cfg = getConfigStatus();
   if (cfg.kind !== "ok") return { error: cfg.message };
 
-  const result = await loadProject(cfg.root, slug);
+  const result = await loadProject(serverFsIO, cfg.root, slug);
   if (!result.ok) {
     return {
       error: `Kan project niet laden: ${result.warnings[0]?.message ?? "onbekende fout"}`,
@@ -35,7 +36,7 @@ export async function exportProjectAction(
   });
 
   const dir = path.join(projectDir(cfg.root, slug), "exports");
-  const write = await writeExport(cfg.root, {
+  const write = await writeExport(serverFsIO, cfg.root, {
     dir,
     baseName: `project-export-${timestamp()}`,
     content,

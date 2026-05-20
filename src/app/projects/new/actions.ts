@@ -1,10 +1,11 @@
 "use server";
+import { serverFsIO } from "@/lib/server-io";
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getConfigStatus } from "@/lib/config";
 import { createProject } from "@/lib/projects/create";
-import { toSlug } from "@/lib/fs/paths";
+import { toSlug } from "@/lib/io/paths";
 import type { ProjectMeta } from "@/lib/schema/meta";
 
 export type CreateProjectFormState = {
@@ -71,7 +72,7 @@ export async function createProjectAction(
     tags: String(formData.get("tags") ?? "").trim(),
   };
 
-  const result = await createProject(cfg.root, {
+  const result = await createProject(serverFsIO, cfg.root, {
     slug,
     name,
     client: values.client,

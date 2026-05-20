@@ -1,45 +1,43 @@
-import "server-only";
-import fs from "node:fs/promises";
-import path from "node:path";
-import { projectDir } from "@/lib/fs/paths";
-import { ensureDir } from "@/lib/fs/atomic-write";
+import { projectDir } from "@/lib/io/paths";
+import type { FsIO } from "@/lib/io/types";
 
-const DEMO_SLUG = "denkmachine-demo";
+export const DEMO_SLUG = "denkmachine-demo";
 
 export type SeedDemoResult =
   | { ok: true; slug: string; dir: string }
   | { ok: false; message: string };
 
 /**
- * Copy the bundled demo project into <root>/projects/denkmachine-demo.
+ * Copy a bundled demo project into <root>/projects/<DEMO_SLUG>.
  *
- * We refuse if the slug already exists; never overwrite. The bundled
- * source lives in `examples/denkmachine-demo/` and is part of the repo
- * so the path is resolved relative to process.cwd() at runtime.
+ * `sourceDir` is environment-specific:
+ * - Node/dev: path.join(process.cwd(), "examples", "denkmachine-demo")
+ * - Tauri: resolved from the app resource directory
+ *
+ * Refuses to overwrite an existing slug.
  */
-export async function seedDemoProject(root: string): Promise<SeedDemoResult> {
+export async function seedDemoProject(
+  io: FsIO,
+  root: string,
+  sourceDir: string,
+): Promise<SeedDemoResult> {
   const target = projectDir(root, DEMO_SLUG);
-  try {
-    await fs.access(target);
+
+  if (await io.exists(target)) {
     return {
       ok: false,
       message: `Project ${DEMO_SLUG} bestaat al op ${target}. Geen actie.`,
     };
-  } catch (err) {
-    if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
   }
 
-  const source = path.join(process.cwd(), "examples", DEMO_SLUG);
-  try {
-    await fs.access(source);
-  } catch {
+  if (!(await io.exists(sourceDir))) {
     return {
       ok: false,
-      message: `Demoproject niet gevonden op ${source}. Is dit een gebouwde versie zonder examples/-map?`,
+      message: `Demoproject niet gevonden op ${sourceDir}.`,
     };
   }
 
-  await ensureDir(path.dirname(target));
-  await fs.cp(source, target, { recursive: true });
+  await io.mkdir(io.dirname(target), { recursive: true });
+  await io.copyDir(sourceDir, target);
   return { ok: true, slug: DEMO_SLUG, dir: target };
 }

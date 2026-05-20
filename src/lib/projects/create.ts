@@ -1,8 +1,5 @@
-import "server-only";
-import fs from "node:fs/promises";
-import path from "node:path";
-import { atomicWrite, ensureDir } from "@/lib/fs/atomic-write";
-import { isSafeSlug, projectDir } from "@/lib/fs/paths";
+import { isSafeSlug, projectDir } from "@/lib/io/paths";
+import type { FsIO } from "@/lib/io/types";
 import { ProjectMeta } from "@/lib/schema/meta";
 import { serializeMeta } from "@/lib/serialize/meta";
 import {
@@ -31,6 +28,7 @@ export type CreateProjectResult =
   | { ok: false; field?: keyof CreateProjectInput; message: string };
 
 export async function createProject(
+  io: FsIO,
   root: string,
   input: CreateProjectInput,
 ): Promise<CreateProjectResult> {
@@ -47,18 +45,13 @@ export async function createProject(
 
   const dir = projectDir(root, input.slug);
 
-  // Refuse if the directory already exists - we never overwrite.
-  try {
-    const stat = await fs.stat(dir);
-    if (stat) {
-      return {
-        ok: false,
-        field: "slug",
-        message: `Er bestaat al een project op ${dir}. Kies een andere slug.`,
-      };
-    }
-  } catch (err) {
-    if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
+  // Refuse if the directory already exists — we never overwrite.
+  if (await io.exists(dir)) {
+    return {
+      ok: false,
+      field: "slug",
+      message: `Er bestaat al een project op ${dir}. Kies een andere slug.`,
+    };
   }
 
   const today = new Date().toISOString().slice(0, 10);
@@ -78,19 +71,25 @@ export async function createProject(
     createdAt: today,
   });
 
-  await ensureDir(dir);
+  await io.mkdir(dir, { recursive: true });
   await Promise.all([
-    ensureDir(path.join(dir, "updates")),
-    ensureDir(path.join(dir, "sources")),
-    ensureDir(path.join(dir, "exports")),
+    io.mkdir(io.join(dir, "updates"), { recursive: true }),
+    io.mkdir(io.join(dir, "sources"), { recursive: true }),
+    io.mkdir(io.join(dir, "exports"), { recursive: true }),
   ]);
 
   await Promise.all([
-    atomicWrite(path.join(dir, "project.meta.json"), serializeMeta(meta)),
-    atomicWrite(path.join(dir, "project-status.md"), statusTemplate(meta.name, today)),
-    atomicWrite(path.join(dir, "project-links.md"), linksTemplate(meta.name)),
-    atomicWrite(path.join(dir, "project-log.md"), logTemplate(meta.name, today)),
-    atomicWrite(path.join(dir, "decision-log.md"), decisionLogTemplate(meta.name)),
+    io.atomicWriteText(io.join(dir, "project.meta.json"), serializeMeta(meta)),
+    io.atomicWriteText(
+      io.join(dir, "project-status.md"),
+      statusTemplate(meta.name, today),
+    ),
+    io.atomicWriteText(io.join(dir, "project-links.md"), linksTemplate(meta.name)),
+    io.atomicWriteText(io.join(dir, "project-log.md"), logTemplate(meta.name, today)),
+    io.atomicWriteText(
+      io.join(dir, "decision-log.md"),
+      decisionLogTemplate(meta.name),
+    ),
   ]);
 
   return { ok: true, slug: input.slug, dir };

@@ -1,4 +1,5 @@
 import { test } from "node:test";
+import { nodeFsIO } from "../../src/lib/io/node-fs";
 import assert from "node:assert/strict";
 import fs from "node:fs/promises";
 import os from "node:os";
@@ -58,7 +59,7 @@ async function makeFixture() {
 test("loadAllProjects loads valid, flags broken, skips unsafe", async () => {
   const root = await makeFixture();
   try {
-    const idx = await loadAllProjects(root);
+    const idx = await loadAllProjects(nodeFsIO, root);
     assert.equal(idx.projects.length, 1, "één valide project geladen");
     assert.equal(idx.projects[0].slug, "valid-demo");
     assert.equal(idx.projects[0].meta.name, "Valid Demo");
@@ -77,7 +78,7 @@ test("loadAllProjects loads valid, flags broken, skips unsafe", async () => {
 test("loadAllProjects on empty root returns empty index", async () => {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), "projectradar-empty-"));
   try {
-    const idx = await loadAllProjects(root);
+    const idx = await loadAllProjects(nodeFsIO, root);
     assert.deepEqual(idx.projects, []);
     assert.deepEqual(idx.broken, []);
     assert.deepEqual(idx.skipped, []);

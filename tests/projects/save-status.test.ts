@@ -1,4 +1,5 @@
 import { test } from "node:test";
+import { nodeFsIO } from "../../src/lib/io/node-fs";
 import assert from "node:assert/strict";
 import fs from "node:fs/promises";
 import os from "node:os";
@@ -8,7 +9,7 @@ import { saveStatusWithBackup } from "../../src/lib/projects/save-status";
 
 async function makeProject() {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), "projectradar-save-"));
-  await createProject(root, {
+  await createProject(nodeFsIO, root, {
     slug: "p",
     name: "P",
     client: "intern",
@@ -31,6 +32,7 @@ test("saveStatusWithBackup writes new content and backs up old", async () => {
     const original = await fs.readFile(statusPath, "utf8");
 
     const r = await saveStatusWithBackup(
+      nodeFsIO,
       root,
       "p",
       "# projectstatus – P\n\n## korte status\nnieuw\n",
@@ -60,7 +62,7 @@ test("saveStatusWithBackup writes new content and backs up old", async () => {
 test("saveStatusWithBackup refuses empty content", async () => {
   const root = await makeProject();
   try {
-    const r = await saveStatusWithBackup(root, "p", "   ", { backup: true });
+    const r = await saveStatusWithBackup(nodeFsIO, root, "p", "   ", { backup: true });
     assert.equal(r.ok, false);
   } finally {
     await fs.rm(root, { recursive: true, force: true });
@@ -70,7 +72,7 @@ test("saveStatusWithBackup refuses empty content", async () => {
 test("saveStatusWithBackup skips backup when option is false", async () => {
   const root = await makeProject();
   try {
-    const r = await saveStatusWithBackup(root, "p", "# x\n", { backup: false });
+    const r = await saveStatusWithBackup(nodeFsIO, root, "p", "# x\n", { backup: false });
     assert.ok(r.ok);
     assert.equal((r as { backupPath: string | null }).backupPath, null);
     const backupsDir = path.join(root, "projects", "p", "exports", "status-backups");
@@ -90,7 +92,7 @@ test("saveStatusWithBackup writes first version when no previous file", async ()
   try {
     const statusPath = path.join(root, "projects", "p", "project-status.md");
     await fs.rm(statusPath);
-    const r = await saveStatusWithBackup(root, "p", "# nieuw\n");
+    const r = await saveStatusWithBackup(nodeFsIO, root, "p", "# nieuw\n");
     assert.ok(r.ok);
     assert.equal((r as { backupPath: string | null }).backupPath, null);
     const content = await fs.readFile(statusPath, "utf8");
@@ -104,11 +106,11 @@ test("saveStatusWithBackup adds counter when two backups collide", async () => {
   const root = await makeProject();
   try {
     const now = new Date("2030-06-15T10:30:00Z");
-    const a = await saveStatusWithBackup(root, "p", "# v1\n", {
+    const a = await saveStatusWithBackup(nodeFsIO, root, "p", "# v1\n", {
       backup: true,
       now,
     });
-    const b = await saveStatusWithBackup(root, "p", "# v2\n", {
+    const b = await saveStatusWithBackup(nodeFsIO, root, "p", "# v2\n", {
       backup: true,
       now,
     });

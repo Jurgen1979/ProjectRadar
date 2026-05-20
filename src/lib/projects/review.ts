@@ -1,6 +1,6 @@
-import "server-only";
 import { loadAllProjects } from "./load-all";
 import { computeSignals } from "./signals";
+import type { FsIO } from "@/lib/io/types";
 import type { Project } from "@/types/project";
 import type { ProjectradarConfig } from "@/lib/schema/config";
 
@@ -65,10 +65,11 @@ function toReviewProject(p: Project, staleDays: number): {
 }
 
 export async function buildReviewData(
+  io: FsIO,
   root: string,
   config: ProjectradarConfig,
 ): Promise<ReviewData> {
-  const idx = await loadAllProjects(root);
+  const idx = await loadAllProjects(io, root);
 
   const considered: ReviewProject[] = [];
   const buckets: ReviewBuckets = {

@@ -1,4 +1,5 @@
 "use server";
+import { serverFsIO } from "@/lib/server-io";
 
 import { revalidatePath } from "next/cache";
 import { getConfigStatus } from "@/lib/config";
@@ -23,14 +24,14 @@ export async function exportReviewAction(
   if (cfg.kind !== "ok") return { error: cfg.message };
 
   const aiText = String(formData.get("aiText") ?? "").trim();
-  const data = await buildReviewData(cfg.root, cfg.config);
+  const data = await buildReviewData(serverFsIO, cfg.root, cfg.config);
   const content = renderReviewMarkdown({
     data,
     generatedAt: new Date(),
     aiText: aiText ? aiText : null,
   });
 
-  const result = await writeExport(cfg.root, {
+  const result = await writeExport(serverFsIO, cfg.root, {
     dir: rootExportsDir(cfg.root),
     baseName: `weekly-review-${timestamp()}`,
     content,

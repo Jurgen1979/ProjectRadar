@@ -1,4 +1,5 @@
 import { test } from "node:test";
+import { nodeFsIO } from "../../src/lib/io/node-fs";
 import assert from "node:assert/strict";
 import fs from "node:fs/promises";
 import os from "node:os";
@@ -25,7 +26,7 @@ async function makeProject(
     lastUpdated: string;
   }>,
 ) {
-  await createProject(root, {
+  await createProject(nodeFsIO, root, {
     slug,
     name: overrides.name ?? slug,
     client: "intern",
@@ -38,7 +39,7 @@ async function makeProject(
     nextAction: overrides.nextAction ?? "",
     riskLevel: overrides.riskLevel ?? "unclear",
   });
-  await updateProjectMeta(root, slug, {
+  await updateProjectMeta(nodeFsIO, root, slug, {
     name: overrides.name ?? slug,
     client: "intern",
     type: "demo",
@@ -84,7 +85,7 @@ test("buildReviewData buckets projects by signals, skips archived", async () => 
     }); // stale
     await makeProject(root, "f", { status: "archived" });
 
-    const data = await buildReviewData(root, DEFAULT_CONFIG);
+    const data = await buildReviewData(nodeFsIO, root, DEFAULT_CONFIG);
 
     assert.equal(data.considered.length, 5);
     assert.equal(data.hidden, 1);
@@ -102,7 +103,7 @@ test("renderReviewMarkdown produces all sections and respects empty buckets", as
   const root = await tmpRoot();
   try {
     await makeProject(root, "alpha", { waitingOn: "me", nextAction: "doe x" });
-    const data = await buildReviewData(root, DEFAULT_CONFIG);
+    const data = await buildReviewData(nodeFsIO, root, DEFAULT_CONFIG);
     const md = renderReviewMarkdown({
       data,
       generatedAt: new Date("2030-06-15"),
@@ -121,7 +122,7 @@ test("renderReviewMarkdown appends AI text after a divider", async () => {
   const root = await tmpRoot();
   try {
     await makeProject(root, "alpha", { waitingOn: "me", nextAction: "doe x" });
-    const data = await buildReviewData(root, DEFAULT_CONFIG);
+    const data = await buildReviewData(nodeFsIO, root, DEFAULT_CONFIG);
     const md = renderReviewMarkdown({
       data,
       generatedAt: new Date("2030-06-15"),

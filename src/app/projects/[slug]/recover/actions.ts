@@ -1,8 +1,9 @@
 "use server";
+import { serverFsIO } from "@/lib/server-io";
 
 import { revalidatePath } from "next/cache";
 import { getConfigStatus } from "@/lib/config";
-import { isSafeSlug } from "@/lib/fs/paths";
+import { isSafeSlug } from "@/lib/io/paths";
 import { recoverFile, recoverFolders } from "@/lib/projects/recover";
 
 export type RecoverActionState = {
@@ -20,7 +21,7 @@ export async function recoverFileAction(
   if (cfg.kind !== "ok") return { message: cfg.message, error: true };
 
   const file = String(formData.get("file") ?? "");
-  const result = await recoverFile(cfg.root, slug, file);
+  const result = await recoverFile(serverFsIO, cfg.root, slug, file);
   if (!result.ok) return { message: result.message, error: true };
 
   revalidatePath(`/projects/${slug}`);
@@ -36,7 +37,7 @@ export async function recoverFoldersAction(
   const cfg = getConfigStatus();
   if (cfg.kind !== "ok") return { message: cfg.message, error: true };
 
-  const result = await recoverFolders(cfg.root, slug);
+  const result = await recoverFolders(serverFsIO, cfg.root, slug);
   if (!result.ok) return { message: result.message, error: true };
 
   revalidatePath(`/projects/${slug}`);

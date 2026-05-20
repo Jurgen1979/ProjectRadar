@@ -1,8 +1,5 @@
-import "server-only";
-import fs from "node:fs/promises";
-import path from "node:path";
-import { atomicWrite, ensureDir } from "@/lib/fs/atomic-write";
-import { projectDir } from "@/lib/fs/paths";
+import { basename, projectDir } from "@/lib/io/paths";
+import type { FsIO } from "@/lib/io/types";
 import { ProjectMeta } from "@/lib/schema/meta";
 import {
   decisionLogTemplate,
@@ -24,26 +21,28 @@ export function isRecoverableFile(name: string): name is RecoverableFile {
   return (RECOVERABLE_FILES as readonly string[]).includes(name);
 }
 
-async function loadMetaName(dir: string): Promise<string> {
-  try {
-    const raw = await fs.readFile(path.join(dir, "project.meta.json"), "utf8");
-    const parsed = JSON.parse(raw);
-    const result = ProjectMeta.safeParse(parsed);
-    if (result.success) return result.data.name;
-  } catch {
-    /* fall through to slug */
+async function loadMetaName(io: FsIO, dir: string): Promise<string> {
+  const raw = await io.readText(io.join(dir, "project.meta.json"));
+  if (raw !== null) {
+    try {
+      const result = ProjectMeta.safeParse(JSON.parse(raw));
+      if (result.success) return result.data.name;
+    } catch {
+      /* fall through */
+    }
   }
-  return path.basename(dir);
+  return basename(dir);
 }
 
 /** Build the exact content we would write — used both for preview and for write. */
 export async function previewRecoveryContent(
+  io: FsIO,
   root: string,
   slug: string,
   file: RecoverableFile,
 ): Promise<string> {
   const dir = projectDir(root, slug);
-  const name = await loadMetaName(dir);
+  const name = await loadMetaName(io, dir);
   const today = new Date().toISOString().slice(0, 10);
   switch (file) {
     case "project-status.md":
@@ -62,6 +61,7 @@ export type RecoverFileResult =
   | { ok: false; message: string };
 
 export async function recoverFile(
+  io: FsIO,
   root: string,
   slug: string,
   file: string,
@@ -70,21 +70,14 @@ export async function recoverFile(
     return { ok: false, message: `Onbekend bestand: ${file}` };
   }
   const dir = projectDir(root, slug);
-  const target = path.join(dir, file);
+  const target = io.join(dir, file);
 
-  // Never overwrite an existing file.
-  try {
-    await fs.access(target);
-    return {
-      ok: false,
-      message: `${file} bestaat al — wordt niet overschreven.`,
-    };
-  } catch (err) {
-    if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
+  if (await io.exists(target)) {
+    return { ok: false, message: `${file} bestaat al — wordt niet overschreven.` };
   }
 
-  const content = await previewRecoveryContent(root, slug, file);
-  await atomicWrite(target, content);
+  const content = await previewRecoveryContent(io, root, slug, file);
+  await io.atomicWriteText(target, content);
   return { ok: true, file, path: target };
 }
 
@@ -96,29 +89,24 @@ export type RecoverFoldersResult =
   | { ok: false; message: string };
 
 export async function recoverFolders(
+  io: FsIO,
   root: string,
   slug: string,
 ): Promise<RecoverFoldersResult> {
   const dir = projectDir(root, slug);
-  try {
-    await fs.access(dir);
-  } catch {
+  if (!(await io.exists(dir))) {
     return { ok: false, message: `Project ${slug} bestaat niet.` };
   }
   const created: FolderName[] = [];
   const existed: FolderName[] = [];
   for (const folder of RECOVERABLE_FOLDERS) {
-    const target = path.join(dir, folder);
-    try {
-      const stat = await fs.stat(target);
-      if (stat.isDirectory()) {
-        existed.push(folder);
-        continue;
-      }
-    } catch (err) {
-      if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
+    const target = io.join(dir, folder);
+    const stat = await io.stat(target);
+    if (stat?.isDirectory) {
+      existed.push(folder);
+      continue;
     }
-    await ensureDir(target);
+    await io.mkdir(target, { recursive: true });
     created.push(folder);
   }
   return { ok: true, created, alreadyExisted: existed };
@@ -129,24 +117,20 @@ export type MissingState = {
   folders: FolderName[];
 };
 
-export async function detectMissing(root: string, slug: string): Promise<MissingState> {
+export async function detectMissing(
+  io: FsIO,
+  root: string,
+  slug: string,
+): Promise<MissingState> {
   const dir = projectDir(root, slug);
   const files: RecoverableFile[] = [];
   for (const f of RECOVERABLE_FILES) {
-    try {
-      await fs.access(path.join(dir, f));
-    } catch {
-      files.push(f);
-    }
+    if (!(await io.exists(io.join(dir, f)))) files.push(f);
   }
   const folders: FolderName[] = [];
   for (const fd of RECOVERABLE_FOLDERS) {
-    try {
-      const stat = await fs.stat(path.join(dir, fd));
-      if (!stat.isDirectory()) folders.push(fd);
-    } catch {
-      folders.push(fd);
-    }
+    const stat = await io.stat(io.join(dir, fd));
+    if (!stat?.isDirectory) folders.push(fd);
   }
   return { files, folders };
 }

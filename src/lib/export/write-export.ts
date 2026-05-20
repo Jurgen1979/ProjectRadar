@@ -1,8 +1,5 @@
-import "server-only";
-import fs from "node:fs/promises";
-import path from "node:path";
-import { atomicWrite, ensureDir } from "@/lib/fs/atomic-write";
-import { resolveUnderRoot } from "@/lib/fs/paths";
+import { resolveUnderRoot } from "@/lib/io/paths";
+import type { FsIO } from "@/lib/io/types";
 
 export type WriteExportInput = {
   /** Absolute path of the directory the file should land in. */
@@ -25,17 +22,18 @@ export type WriteExportResult =
  * caller can show a friendly path in the UI.
  */
 export async function writeExport(
+  io: FsIO,
   root: string,
   input: WriteExportInput,
 ): Promise<WriteExportResult> {
   if (!input.content.trim()) {
     return { ok: false, message: "Lege export — weiger te schrijven." };
   }
-  await ensureDir(input.dir);
+  await io.mkdir(input.dir, { recursive: true });
 
   let candidate = `${input.baseName}.md`;
   let n = 2;
-  while (await pathExists(path.join(input.dir, candidate))) {
+  while (await io.exists(io.join(input.dir, candidate))) {
     candidate = `${input.baseName}-${n}.md`;
     n++;
     if (n > 99) {
@@ -46,9 +44,20 @@ export async function writeExport(
     }
   }
 
-  const target = path.join(input.dir, candidate);
-  await atomicWrite(target, input.content);
-  return { ok: true, path: target, relativeToRoot: path.relative(root, target) };
+  const target = io.join(input.dir, candidate);
+  await io.atomicWriteText(target, input.content);
+  return {
+    ok: true,
+    path: target,
+    relativeToRoot: relativeTo(root, target),
+  };
+}
+
+function relativeTo(root: string, target: string): string {
+  const r = root.replace(/\\/g, "/").replace(/\/+$/, "");
+  const t = target.replace(/\\/g, "/");
+  if (t.startsWith(r + "/")) return t.slice(r.length + 1);
+  return t;
 }
 
 /** Format a Date as YYYY-MM-DD-HHMM for filenames. */
@@ -63,13 +72,4 @@ export function timestamp(now: Date = new Date()): string {
 /** Path to the root-level /exports dir, validated against path traversal. */
 export function rootExportsDir(root: string): string {
   return resolveUnderRoot(root, "exports");
-}
-
-async function pathExists(p: string): Promise<boolean> {
-  try {
-    await fs.access(p);
-    return true;
-  } catch {
-    return false;
-  }
 }

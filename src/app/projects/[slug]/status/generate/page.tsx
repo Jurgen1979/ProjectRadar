@@ -1,9 +1,8 @@
-import fs from "node:fs/promises";
-import path from "node:path";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getAiStatus, getConfigStatus } from "@/lib/config";
-import { isSafeSlug, projectDir } from "@/lib/fs/paths";
+import { isSafeSlug, projectDir } from "@/lib/io/paths";
+import { serverFsIO } from "@/lib/server-io";
 import { NoRootState } from "@/components/projects/empty-state";
 import { StatusGeneratorForm } from "./form";
 
@@ -19,24 +18,12 @@ export default async function GenerateStatusPage({
   if (cfg.kind !== "ok") return <NoRootState message={cfg.message} />;
 
   const dir = projectDir(cfg.root, slug);
-  try {
-    const stat = await fs.stat(dir);
-    if (!stat.isDirectory()) notFound();
-  } catch (err) {
-    if ((err as NodeJS.ErrnoException).code === "ENOENT") notFound();
-    throw err;
-  }
+  const dirStat = await serverFsIO.stat(dir);
+  if (!dirStat || !dirStat.isDirectory) notFound();
 
-  let currentStatus: string | null = null;
-  try {
-    currentStatus = await fs.readFile(
-      path.join(dir, "project-status.md"),
-      "utf8",
-    );
-  } catch {
-    /* missing is fine */
-  }
-
+  const currentStatus = await serverFsIO.readText(
+    serverFsIO.join(dir, "project-status.md"),
+  );
   const ai = getAiStatus(cfg.config);
 
   return (

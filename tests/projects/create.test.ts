@@ -1,4 +1,5 @@
 import { test } from "node:test";
+import { nodeFsIO } from "../../src/lib/io/node-fs";
 import assert from "node:assert/strict";
 import fs from "node:fs/promises";
 import os from "node:os";
@@ -12,7 +13,7 @@ async function tmpRoot() {
 test("createProject scaffolds all files and folders", async () => {
   const root = await tmpRoot();
   try {
-    const r = await createProject(root, {
+    const r = await createProject(nodeFsIO, root, {
       slug: "alpha",
       name: "Alpha",
       client: "intern",
@@ -50,7 +51,7 @@ test("createProject scaffolds all files and folders", async () => {
 test("createProject refuses unsafe slug", async () => {
   const root = await tmpRoot();
   try {
-    const r = await createProject(root, {
+    const r = await createProject(nodeFsIO, root, {
       slug: "Bad Name",
       name: "x",
       client: "",
@@ -73,7 +74,7 @@ test("createProject refuses unsafe slug", async () => {
 test("createProject refuses duplicate", async () => {
   const root = await tmpRoot();
   try {
-    const a = await createProject(root, {
+    const a = await createProject(nodeFsIO, root, {
       slug: "dup",
       name: "Dup",
       client: "intern",
@@ -87,7 +88,7 @@ test("createProject refuses duplicate", async () => {
       riskLevel: "unclear",
     });
     assert.ok(a.ok);
-    const b = await createProject(root, {
+    const b = await createProject(nodeFsIO, root, {
       slug: "dup",
       name: "Dup 2",
       client: "intern",

@@ -1,20 +1,29 @@
-import "server-only";
 import { generateText } from "ai";
 import { createOpenAI } from "@ai-sdk/openai";
-import { getAiStatus, resolveApiKey } from "@/lib/ai/provider";
+import type { AiProvider } from "@/lib/schema/enums";
+import type { FsIO } from "@/lib/io/types";
 import type { ProjectradarConfig } from "@/lib/schema/config";
 import { gatherStatusContext } from "@/lib/ai/gather-context";
 import { STATUS_SYSTEM_PROMPT, buildStatusUserPrompt } from "@/lib/ai/prompts";
 
+/**
+ * Resolved AI call configuration. Caller picks where these come from:
+ * - server actions / dev mode: from env via getAiStatus + resolveApiKey
+ * - Tauri desktop: from app config store
+ */
+export type AiCallConfig = {
+  provider: Exclude<AiProvider, "none">;
+  model: string;
+  baseURL: string;
+  apiKey: string;
+  headers: Record<string, string>;
+};
+
 export type GenerateStatusOk = {
   ok: true;
-  /** Markdown body returned by the model. */
   text: string;
-  /** Project name we passed in — useful for re-rendering the form. */
   projectName: string;
-  /** Truncation warning shown above the preview, null if everything fit. */
   truncationNote: string | null;
-  /** Discrete details for the metadata accordion. */
   meta: {
     model: string;
     provider: string;
@@ -31,36 +40,21 @@ export type GenerateStatusOk = {
 export type GenerateStatusErr = {
   ok: false;
   message: string;
-  /** Carried over so the UI can still hint the user. */
   truncationNote?: string | null;
 };
 
 export type GenerateStatusResult = GenerateStatusOk | GenerateStatusErr;
 
 export async function generateStatus(
+  io: FsIO,
   root: string,
   slug: string,
   config: ProjectradarConfig,
+  ai: AiCallConfig,
 ): Promise<GenerateStatusResult> {
-  const ai = getAiStatus(config);
-  if (!ai.enabled) {
-    return {
-      ok: false,
-      message: `AI staat uit: ${ai.reason}`,
-    };
-  }
-
-  const apiKey = resolveApiKey(ai.provider);
-  if (!apiKey) {
-    return {
-      ok: false,
-      message: `Geen API key beschikbaar voor ${ai.provider}.`,
-    };
-  }
-
   let context;
   try {
-    context = await gatherStatusContext(root, slug, config);
+    context = await gatherStatusContext(io, root, slug, config);
   } catch (err) {
     return { ok: false, message: (err as Error).message };
   }
@@ -76,7 +70,7 @@ export async function generateStatus(
   });
 
   const provider = createOpenAI({
-    apiKey,
+    apiKey: ai.apiKey,
     baseURL: ai.baseURL,
     headers: ai.headers,
   });

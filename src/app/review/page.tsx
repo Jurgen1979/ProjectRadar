@@ -1,5 +1,6 @@
 import { getAiStatus, getConfigStatus } from "@/lib/config";
 import { buildReviewData } from "@/lib/projects/review";
+import { serverFsIO } from "@/lib/server-io";
 import { NoRootState } from "@/components/projects/empty-state";
 import { ReviewBucket } from "@/components/projects/review/review-bucket";
 import { ReviewActions } from "@/components/projects/review/review-actions";
@@ -9,7 +10,7 @@ export default async function ReviewPage() {
   const cfg = getConfigStatus();
   if (cfg.kind !== "ok") return <NoRootState message={cfg.message} />;
 
-  const data = await buildReviewData(cfg.root, cfg.config);
+  const data = await buildReviewData(serverFsIO, cfg.root, cfg.config);
   const ai = getAiStatus(cfg.config);
   const allClear = bucketsEmpty(data.buckets);
 

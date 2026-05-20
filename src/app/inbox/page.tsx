@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getConfigStatus } from "@/lib/config";
 import { loadAllProjects } from "@/lib/projects/load-all";
+import { serverFsIO } from "@/lib/server-io";
 import { NoRootState } from "@/components/projects/empty-state";
 import { InboxForm, type ProjectChoice } from "./form";
 
@@ -12,7 +13,7 @@ export default async function InboxPage({
   const cfg = getConfigStatus();
   if (cfg.kind !== "ok") return <NoRootState message={cfg.message} />;
 
-  const idx = await loadAllProjects(cfg.root);
+  const idx = await loadAllProjects(serverFsIO, cfg.root);
   const projects: ProjectChoice[] = idx.projects
     .map((p) => ({
       slug: p.slug,

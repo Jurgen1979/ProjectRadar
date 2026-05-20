@@ -1,4 +1,5 @@
 import { test } from "node:test";
+import { nodeFsIO } from "../../src/lib/io/node-fs";
 import assert from "node:assert/strict";
 import fs from "node:fs/promises";
 import os from "node:os";
@@ -9,7 +10,7 @@ import { createProject } from "../../src/lib/projects/create";
 async function makeProject(): Promise<{ root: string; slug: string }> {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), "projectradar-upd-"));
   const slug = "demo";
-  await createProject(root, {
+  await createProject(nodeFsIO, root, {
     slug,
     name: "Demo",
     client: "intern",
@@ -28,7 +29,7 @@ async function makeProject(): Promise<{ root: string; slug: string }> {
 test("addUpdate creates structured markdown and bumps lastUpdated", async () => {
   const { root, slug } = await makeProject();
   try {
-    const r = await addUpdate(root, slug, {
+    const r = await addUpdate(nodeFsIO, root, slug, {
       title: "eerste",
       bron: "ChatGPT",
       datum: "2030-01-15",
@@ -58,13 +59,13 @@ test("addUpdate creates structured markdown and bumps lastUpdated", async () => 
 test("addUpdate suffixes duplicate filenames", async () => {
   const { root, slug } = await makeProject();
   try {
-    const a = await addUpdate(root, slug, {
+    const a = await addUpdate(nodeFsIO, root, slug, {
       title: "x",
       bron: "ChatGPT",
       datum: "2030-01-15",
       body: "a",
     });
-    const b = await addUpdate(root, slug, {
+    const b = await addUpdate(nodeFsIO, root, slug, {
       title: "x",
       bron: "ChatGPT",
       datum: "2030-01-15",
@@ -81,7 +82,7 @@ test("addUpdate suffixes duplicate filenames", async () => {
 test("addUpdate raw=true keeps verbatim body", async () => {
   const { root, slug } = await makeProject();
   try {
-    const r = await addUpdate(root, slug, {
+    const r = await addUpdate(nodeFsIO, root, slug, {
       title: "raw",
       bron: "Claude",
       datum: "2030-01-15",
@@ -102,15 +103,15 @@ test("addUpdate refuses missing fields and bad date", async () => {
   const { root, slug } = await makeProject();
   try {
     assert.equal(
-      (await addUpdate(root, slug, { title: "", bron: "x", datum: "2030-01-15", body: "x" })).ok,
+      (await addUpdate(nodeFsIO, root, slug, { title: "", bron: "x", datum: "2030-01-15", body: "x" })).ok,
       false,
     );
     assert.equal(
-      (await addUpdate(root, slug, { title: "x", bron: "x", datum: "2030-01-15", body: "" })).ok,
+      (await addUpdate(nodeFsIO, root, slug, { title: "x", bron: "x", datum: "2030-01-15", body: "" })).ok,
       false,
     );
     assert.equal(
-      (await addUpdate(root, slug, { title: "x", bron: "x", datum: "vandaag", body: "x" })).ok,
+      (await addUpdate(nodeFsIO, root, slug, { title: "x", bron: "x", datum: "vandaag", body: "x" })).ok,
       false,
     );
   } finally {
@@ -121,13 +122,13 @@ test("addUpdate refuses missing fields and bad date", async () => {
 test("addUpdate does not lower lastUpdated when older date is added", async () => {
   const { root, slug } = await makeProject();
   try {
-    await addUpdate(root, slug, {
+    await addUpdate(nodeFsIO, root, slug, {
       title: "new",
       bron: "x",
       datum: "2030-06-01",
       body: "a",
     });
-    await addUpdate(root, slug, {
+    await addUpdate(nodeFsIO, root, slug, {
       title: "old",
       bron: "x",
       datum: "2030-01-01",
