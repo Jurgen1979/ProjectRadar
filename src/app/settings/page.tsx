@@ -1,5 +1,7 @@
 import { getAiStatus, getConfigStatus, providerLabel } from "@/lib/config";
 import { DEFAULT_CONFIG } from "@/lib/schema/config";
+import { TauriOnly, WebOnly } from "@/components/web-only";
+import { TauriSettings } from "./_tauri-settings";
 
 function Row({ label, value }: { label: string; value: React.ReactNode }) {
   return (
@@ -11,22 +13,40 @@ function Row({ label, value }: { label: string; value: React.ReactNode }) {
 }
 
 export default function SettingsPage() {
+  return (
+    <div className="space-y-6">
+      <header className="space-y-1">
+        <h1 className="text-2xl font-semibold tracking-tight">Instellingen</h1>
+      </header>
+      <TauriOnly>
+        <p className="text-sm text-muted-foreground max-w-2xl">
+          Pas projectroot en AI-configuratie aan. Veranderingen worden lokaal
+          opgeslagen in de app-config van Projectradar.
+        </p>
+        <TauriSettings />
+      </TauriOnly>
+      <WebOnly>
+        <WebSettings />
+      </WebOnly>
+    </div>
+  );
+}
+
+function WebSettings() {
   const cfg = getConfigStatus();
   const effective = cfg.kind === "ok" ? cfg.config : DEFAULT_CONFIG;
   const ai = getAiStatus(effective);
   const headerKeys = ai.enabled ? Object.keys(ai.headers) : [];
 
   return (
-    <div className="space-y-6">
-      <header className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">Instellingen</h1>
-        <p className="text-sm text-muted-foreground max-w-2xl">
-          Read-only weergave van de actieve configuratie. Pas waarden aan via{" "}
-          <code className="px-1 rounded bg-muted">.env.local</code> of{" "}
-          <code className="px-1 rounded bg-muted">projectradar.config.json</code>
-          {" "}in de projectroot.
-        </p>
-      </header>
+    <>
+      <p className="text-sm text-muted-foreground max-w-2xl">
+        Read-only weergave van de actieve configuratie (web/dev-mode). Pas
+        waarden aan via{" "}
+        <code className="px-1 rounded bg-muted">.env.local</code> of{" "}
+        <code className="px-1 rounded bg-muted">projectradar.config.json</code>
+        {" "}in de projectroot.
+      </p>
 
       <section className="rounded-lg border border-border bg-background">
         <div className="border-b border-border px-4 py-2 text-xs uppercase tracking-wide text-muted-foreground">
@@ -129,6 +149,6 @@ export default function SettingsPage() {
           <Row label="Datumformaat" value={effective.dateFormat} />
         </div>
       </section>
-    </div>
+    </>
   );
 }

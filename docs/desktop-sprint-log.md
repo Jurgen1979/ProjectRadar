@@ -170,6 +170,33 @@ Beperking:
 
 Volgende fase: settings UI voor AI met OpenRouter/OpenAI + Test-verbinding-knop, AI-statusgenerator end-to-end met store-config.
 
+### Fase 5 — AI settings en providerlaag
+
+**Status: groen.**
+
+- `src/lib/ai/test-connection.ts` — kleine completion call (temp=0, 1-word prompt) om key+model snel te valideren.
+- `src/app/settings/_tauri-settings.tsx` — schrijfbare Settings UI:
+  - Projectroot wijzigen via native folder picker
+  - AI provider/model/key/HTTP-Referer/X-Title/baseURL override
+  - Key gemaskeerd getoond (`••••••••1234`), met "toon"-toggle
+  - Bewerking-detectie: alleen wanneer user iets typt dat niet met `•` begint vervangt de key — anders blijft de bestaande staan
+  - "Test verbinding"-knop met latency + sample-output
+  - Live status-pill bij elk model: ingeschakeld / uitleg waarom uit
+
+Web-mode settings blijven read-only met env-info (geen wijziging in dev-flow).
+
+AI-statusgenerator is end-to-end aangesloten op de store-config:
+- `generateStatusTauri` uit Fase 4 leest config via `loadAppConfig()` + `deriveAiStatus()`
+- Zelfde voor `generateReviewTauri`
+
+Checks:
+- `npm test` 66/66 groen
+- `npm run typecheck` schoon
+- `npm run build` schoon
+
+Volgende fase: installer/build pipeline + GitHub Actions workflow voor Win/macOS artifacts.
+
+
 
 
 
