@@ -196,6 +196,42 @@ Checks:
 
 Volgende fase: installer/build pipeline + GitHub Actions workflow voor Win/macOS artifacts.
 
+### Fase 6 — Installer/build pipeline
+
+**Status: deels groen — blokker bij prod-build, dev-build + CI-config wel klaar.**
+
+Gedaan:
+- `next.config.ts` heeft een `PR_BUILD_TARGET=desktop` schakelaar die `output: 'export'` + `trailingSlash: true` + `images.unoptimized` aanzet.
+- `src/app/layout.tsx`: `force-dynamic` verwijderd — vanilla `npm run build` produceert nu statische pages (`○`) en SSG voor dynamic routes (`●`).
+- `src/app/projects/[slug]/{page,edit,updates/new,status/generate}/page.tsx` hebben `generateStaticParams = () => []` en `dynamicParams = false` voor static-export compat.
+- Alle `app/.../actions.ts` server-action bestanden vervangen door pure client stubs (geen `"use server"`, geen `next/cache`/`next/navigation`/`server-io` imports). De write-paden in web-mode geven nu een nette "gebruik de Tauri desktop-app"-melding; Tauri-mode is volledig functioneel via `useUnifiedAction` → tauri-handler.
+- `src-tauri/` release-build compileert (`cargo build --release` slaagt in ~3 minuten).
+- `.github/workflows/desktop-build.yml`: matrix-build voor macOS arm64 + x64 + Windows x64 met cargo cache. Triggers op tags `v*` en handmatig.
+
+**Blokker — Next.js 16 `output: 'export'`**:
+Bij `PR_BUILD_TARGET=desktop next build` blijft Next 16 onterecht melden `Page "/projects/[slug]/edit" is missing "generateStaticParams()"`, terwijl die export er staat (in elke variant geprobeerd: async function, arrow fn, sync, vóór/na default export, met/zonder `dynamicParams = false`). Vanilla `next build` (zonder `output: 'export'`) erkent diezelfde exports wel — pages worden als SSG gerenderd.
+
+Dit lijkt een Next 16-quirk met static export + complex dual-mode page structuur (TauriOnly/WebOnly inside async page). Een gerichte oplossing vereist:
+- Of: de dynamische routes converteren naar puur-client componenten (verlies van WebOnly SSR), of
+- Of: een patched Next-version of upgrade afwachten naar een fix.
+
+Tauri-dev-mode (`npm run tauri:dev`) is NIET getroffen — daar laadt de webview localhost:1420 die de Next dev-server bedient. Tauri PROD installer is geblokkeerd tot Fase 7-doc-task.
+
+Aanbevolen vervolg (post-sprint):
+1. Vervang dynamische page.tsx files door `"use client"` + `useParams()` based components. WebOnly server-rendering vervalt voor die routes, maar Tauri-mode werkt onveranderd.
+2. Hertest static export.
+3. Trigger GitHub Actions release-build voor signed installers.
+
+Checks:
+- `npm test` 66/66 groen
+- `npm run typecheck` schoon
+- `npm run build` (vanilla) schoon, alle 13 routes worden als static/SSG gegenereerd
+- `cargo build --release` op `src-tauri` slaagt
+- `PR_BUILD_TARGET=desktop npm run build` faalt op Next 16-quirk (zie boven)
+
+Volgende fase: docs + final smoke test.
+
+
 
 
 

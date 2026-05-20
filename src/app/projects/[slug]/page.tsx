@@ -1,4 +1,3 @@
-import { notFound } from "next/navigation";
 import { getConfigStatus } from "@/lib/config";
 import { loadProject } from "@/lib/projects/load-one";
 import { computeSignals } from "@/lib/projects/signals";
@@ -19,13 +18,20 @@ import { SourcesSection } from "@/components/projects/detail/sources-section";
 import { RecoveryPanel } from "@/components/projects/detail/recovery-panel";
 import { detectMissing, previewRecoveryContent } from "@/lib/projects/recover";
 
+// For static export: no slugs known at build time. Tauri client
+// reads the slug via useParams() at runtime.
+export const dynamicParams = false;
+export async function generateStaticParams() {
+  return [];
+}
+
 export default async function ProjectDetailPage({
   params,
 }: {
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  if (!isSafeSlug(slug)) notFound();
+  if (!isSafeSlug(slug)) return null;
 
   return (
     <>
@@ -45,7 +51,7 @@ async function WebProjectDetail({ slug }: { slug: string }) {
 
   const dir = projectDir(cfg.root, slug);
   const dirStat = await serverFsIO.stat(dir);
-  if (!dirStat || !dirStat.isDirectory) notFound();
+  if (!dirStat || !dirStat.isDirectory) return null;
 
   const result = await loadProject(serverFsIO, cfg.root, slug);
   if (!result.ok) {

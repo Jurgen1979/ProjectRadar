@@ -23,7 +23,6 @@ export const metadata: Metadata = {
   description: "Local-first projectdashboard op markdown en JSON",
 };
 
-export const dynamic = "force-dynamic";
 
 export default function RootLayout({
   children,

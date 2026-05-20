@@ -1,4 +1,3 @@
-import { notFound } from "next/navigation";
 import { getConfigStatus } from "@/lib/config";
 import { isSafeSlug, projectDir } from "@/lib/io/paths";
 import { loadProject } from "@/lib/projects/load-one";
@@ -9,13 +8,20 @@ import { EditMetaForm } from "./form";
 import { TauriEdit } from "./_tauri-edit";
 import { WarningsBanner } from "@/components/projects/detail/warnings-banner";
 
+// For static export: no slugs known at build time. Tauri client
+// reads the slug via useParams() at runtime.
+export const dynamicParams = false;
+export async function generateStaticParams() {
+  return [];
+}
+
 export default async function EditProjectPage({
   params,
 }: {
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  if (!isSafeSlug(slug)) notFound();
+  if (!isSafeSlug(slug)) return null;
 
   return (
     <div className="space-y-6">
@@ -46,7 +52,7 @@ async function WebEdit({ slug }: { slug: string }) {
   if (cfg.kind !== "ok") return <NoRootState message={cfg.message} />;
 
   const dirStat = await serverFsIO.stat(projectDir(cfg.root, slug));
-  if (!dirStat || !dirStat.isDirectory) notFound();
+  if (!dirStat || !dirStat.isDirectory) return null;
 
   const result = await loadProject(serverFsIO, cfg.root, slug);
   if (!result.ok) {

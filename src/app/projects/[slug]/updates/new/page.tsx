@@ -1,4 +1,3 @@
-import { notFound } from "next/navigation";
 import { getConfigStatus } from "@/lib/config";
 import { isSafeSlug, projectDir } from "@/lib/io/paths";
 import { serverFsIO } from "@/lib/server-io";
@@ -6,13 +5,20 @@ import { NoRootState } from "@/components/projects/empty-state";
 import { TauriOnly, WebOnly } from "@/components/web-only";
 import { AddUpdateForm } from "./form";
 
+// For static export: no slugs known at build time. Tauri client
+// reads the slug via useParams() at runtime.
+export const dynamicParams = false;
+export async function generateStaticParams() {
+  return [];
+}
+
 export default async function NewUpdatePage({
   params,
 }: {
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  if (!isSafeSlug(slug)) notFound();
+  if (!isSafeSlug(slug)) return null;
   const today = new Date().toISOString().slice(0, 10);
 
   return (
@@ -42,6 +48,6 @@ export default async function NewUpdatePage({
 async function WebPage({ slug, defaultDate }: { slug: string; defaultDate: string }) {
   const cfg = getConfigStatus();
   if (cfg.kind !== "ok") return <NoRootState message={cfg.message} />;
-  if (!(await serverFsIO.exists(projectDir(cfg.root, slug)))) notFound();
+  if (!(await serverFsIO.exists(projectDir(cfg.root, slug)))) return null;
   return <AddUpdateForm slug={slug} defaultDate={defaultDate} />;
 }

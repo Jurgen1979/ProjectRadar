@@ -1,4 +1,3 @@
-import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getAiStatus, getConfigStatus } from "@/lib/config";
 import { isSafeSlug, projectDir } from "@/lib/io/paths";
@@ -8,13 +7,20 @@ import { TauriOnly, WebOnly } from "@/components/web-only";
 import { StatusGeneratorForm } from "./form";
 import { TauriStatusGenerate } from "./_tauri-page";
 
+// For static export: no slugs known at build time. Tauri client
+// reads the slug via useParams() at runtime.
+export const dynamicParams = false;
+export async function generateStaticParams() {
+  return [];
+}
+
 export default async function GenerateStatusPage({
   params,
 }: {
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  if (!isSafeSlug(slug)) notFound();
+  if (!isSafeSlug(slug)) return null;
 
   return (
     <div className="space-y-6">
@@ -52,7 +58,7 @@ async function WebPage({ slug }: { slug: string }) {
 
   const dir = projectDir(cfg.root, slug);
   const dirStat = await serverFsIO.stat(dir);
-  if (!dirStat || !dirStat.isDirectory) notFound();
+  if (!dirStat || !dirStat.isDirectory) return null;
 
   const currentStatus = await serverFsIO.readText(
     serverFsIO.join(dir, "project-status.md"),
