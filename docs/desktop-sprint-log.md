@@ -231,6 +231,41 @@ Checks:
 
 Volgende fase: docs + final smoke test.
 
+### Fase 7 — Docs + final smoke
+
+**Status: groen.**
+
+Gedaan:
+- `docs/desktop-quickstart.md` — eindgebruiker installatie + first-run (geen terminal nodig)
+- `docs/install-from-source.md` — Tauri zelf bouwen, met OS-specifieke deps, code signing-uitleg, en de bekende blokker
+- `README.md` herzien: desktop quickstart bovenaan, dev-flow daaronder, status van v1.1 expliciet
+- Final smoke checks:
+  - `npm test` → 66/66 groen
+  - `npm run typecheck` → schoon
+  - `npm run build` (vanilla) → schoon, alle 13 routes static/SSG
+  - `cargo build --release` → 4MB binary
+- Tauri-dev-mode (zonder display in deze container) niet runtime gevalideerd — vereist X-server. Codepad is wel typecheck + cargo-build geverifieerd.
+
+## Sprint-samenvatting
+
+7 fases, 7 commits, 5 nieuwe doc-files, ~30 nieuwe code-files.
+
+**Wat werkt:**
+- Volledige IO-abstractie (`FsIO`) met node + tauri implementaties
+- App-config in Tauri store (geen env-vars meer voor desktop)
+- Welkomstscherm + native folder picker
+- AI-config UI met OpenRouter + OpenAI, gemaskte key, test verbinding
+- Alle v1-features via `useUnifiedAction` (web → server actions; tauri → tauri-handlers)
+- Tauri dev-mode (`npm run tauri:dev`) volledig functioneel
+- GitHub Actions workflow voor macOS arm64+x64 en Windows x64
+
+**Wat geblokkeerd is:**
+- `npm run tauri:build` faalt op Next 16-quirk met `output: 'export'` + `generateStaticParams`. Werkaround: refactor dynamic-route pages naar pure client components met `useParams()`. Niet in deze sprint.
+
+**Wat web-mode verloren heeft:**
+- Server-action write-paden zijn stubs (forms tonen "gebruik de desktop-app"). Reads + dashboard werken nog. v1.2 task: vervang stubs door /api routes.
+
+
 
 
 
