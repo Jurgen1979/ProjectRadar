@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { SeedDemoButton } from "./seed-demo-button";
 
 export function NoRootState({ message }: { message: string }) {
   return (
@@ -37,12 +38,19 @@ export function NoProjectsState({ root }: { root: string }) {
           {root}/projects/
         </p>
       </div>
-      <Link
-        href="/projects/new"
-        className="inline-block px-3 py-1.5 text-sm rounded-md bg-accent text-accent-foreground hover:opacity-90"
-      >
-        + eerste project aanmaken
-      </Link>
+      <div className="flex items-center gap-3 flex-wrap">
+        <Link
+          href="/projects/new"
+          className="inline-block px-3 py-1.5 text-sm rounded-md bg-accent text-accent-foreground hover:opacity-90"
+        >
+          + eerste project aanmaken
+        </Link>
+        <SeedDemoButton />
+      </div>
+      <p className="text-xs text-muted-foreground pt-1">
+        Het voorbeeldproject toont hoe een ingevuld project eruitziet — met
+        status, links, updates, beslissingen en een AI-statusvoorbeeld.
+      </p>
     </div>
   );
 }

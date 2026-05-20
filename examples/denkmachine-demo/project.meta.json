@@ -1,0 +1,15 @@
+{
+  "id": "denkmachine-demo",
+  "name": "Denkmachine",
+  "client": "intern",
+  "type": "product",
+  "status": "active",
+  "phase": "positionering",
+  "priority": "high",
+  "tags": ["ai", "product", "strategie"],
+  "waitingOn": "me",
+  "nextAction": "Logo-richting finaliseren en mockup maken",
+  "riskLevel": "medium",
+  "lastUpdated": "2026-05-19",
+  "createdAt": "2026-04-01"
+}

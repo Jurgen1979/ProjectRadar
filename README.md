@@ -1,26 +1,35 @@
 # Projectradar
 
-Local-first projectdashboard op gewone markdown- en JSON-bestanden. Geen database, geen login, geen cloud — je projectdata blijft in een map die jij beheert.
+Local-first projectdashboard op gewone markdown- en JSON-bestanden. Geen database, geen login, geen cloud — je projectdata blijft in een map die jij beheert. AI is optioneel.
 
-Status: **v0.1 — Fase 0** (basisproject, layout, configuratie, helpers). Parsing, dashboard, updates en AI volgen in latere fasen.
+## Wat doet het
+
+Eén scanbaar dashboard over alle projecten die je verspreid hebt over ChatGPT-gesprekken, Gmail-labels, Drive-mappen, lokale projectfolders, Replit, GitHub en losse documenten. Per project zie je status, dashboardzin, volgende actie, wacht-op, risico, leeftijd van de laatste update, signalen en links. Geheugen voor je werk, niet nog een projecttool.
 
 ## Snelstart
 
 ```bash
 npm install
 cp .env.local.example .env.local
-# zet PROJECTRADAR_ROOT naar een (lege) map waarin je /projects gaat zetten
+# Zet PROJECTRADAR_ROOT op een (lege) map waar je /projects gaat zetten.
+# Optioneel: zet AI_PROVIDER + AI_MODEL + API key.
 npm run dev
 ```
 
-Open <http://localhost:3000>. Zonder `PROJECTRADAR_ROOT` toont de app een gele banner. Dat is normaal in Fase 0.
+Open <http://localhost:3000>. Klik **of: gebruik voorbeeldproject** voor een meteen gevuld dashboard.
 
-## Scripts
+## Features in v1
 
-- `npm run dev` — Next.js dev-server (Turbopack)
-- `npm run build` — productie-build
-- `npm run start` — productie-start
-- `npm run typecheck` — `tsc --noEmit`
+- **Dashboard** met filters, signaal-pills (wacht-op-mij/-klant, stilgevallen, geen volgende actie, hoog risico, onduidelijk), tag-filter en zoekveld.
+- **Projectdetail** met huidige status, volgende actie, gegroepeerde links, recente updates, beslissingen, log en bronnen.
+- **Project aanmaken** met scaffold van alle standaardfiles.
+- **Update toevoegen** vanuit het project of vanuit de **Inbox** (één pagina: plak, kies project, opslaan).
+- **Metadata bewerken** via volledig formulier met Zod-validatie.
+- **Herstel ontbrekende files en mappen** met preview voordat er iets geschreven wordt.
+- **AI-statusgenerator** met preview, bewerkbare voorstel-zijde, en automatische backup van de oude status.
+- **Review-pagina** met heuristische buckets en optionele AI-review.
+- **Exports** naar markdown: dashboard, weekly review, en per project.
+- **Templates-pagina** met alle prompts en file-templates voor gebruik buiten de app.
 
 ## Configuratie
 
@@ -31,7 +40,7 @@ Twee plekken, beide optioneel:
    - `AI_PROVIDER` — `openrouter` / `openai` / `none`
    - `AI_MODEL` — modelnaam (zie hieronder)
    - `OPENROUTER_API_KEY` of `OPENAI_API_KEY` afhankelijk van provider
-2. **`projectradar.config.json`** in de projectroot — defaults voor o.a. `staleDays`, `reviewWindowDays`. Env-waarden overrulen dit bestand.
+2. **`projectradar.config.json`** in de projectroot — defaults voor o.a. `staleDays`, `reviewWindowDays`, `maxUpdatesForStatusGeneration`, `backupOnStatusOverwrite`. Env-waarden overrulen dit bestand.
 
 Als beide ontbreken draait de app met defaults, zonder AI.
 
@@ -44,32 +53,43 @@ Als beide ontbreken draait de app met defaults, zonder AI.
 
 Beide providers gebruiken intern de OpenAI-compatible API (OpenRouter via `https://openrouter.ai/api/v1`). Wisselen is een `.env.local`-aanpassing. AI is volledig opt-in: zonder key blijft de app werken, de AI-features verschijnen dan met een uitleg waarom ze uit staan.
 
-## Mappenstructuur (huidig)
+## Docs
+
+- [Workflow](docs/workflow.md) — dagelijkse en wekelijkse routine
+- [Bestandsstructuur](docs/file-structure.md) — uitleg per file en per map
+- [Prompts](docs/prompts.md) — alle copy-paste prompts en de interne AI-prompts
+- [Voorbeeldproject](docs/example-project.md) — wat zit er in `denkmachine-demo`
+
+## Scripts
+
+- `npm run dev` — Next.js dev-server (Turbopack)
+- `npm run build` — productie-build
+- `npm run start` — productie-start
+- `npm run typecheck` — `tsc --noEmit`
+- `npm test` — unit tests (node:test, geen browser nodig)
+
+## Mappenstructuur van de code
 
 ```
 src/
-  app/
-    layout.tsx              # header + navigatie + config-banner
-    page.tsx                # redirect → /projects
-    projects/               # dashboard (placeholder)
-    inbox/                  # ultraminimale update-inbox (placeholder)
-    review/                 # heuristische review (placeholder)
-    templates/              # statische prompts (placeholder)
-    settings/               # read-only weergave actieve config
-  components/
-    nav.tsx
-    config-banner.tsx
-    placeholder.tsx
+  app/             # Next.js routes (server + client components)
+    projects/      # dashboard, detail, new, edit, updates, status, exports
+    inbox/         # ultraminimale inbox
+    review/        # heuristische + AI-review
+    templates/     # prompts en file-templates met copy
+    settings/      # read-only configuratie
+  components/      # gedeelde UI (cards, pills, forms, recovery panel, …)
   lib/
-    config.ts               # env + config-bestand laden + AI-status
-    utils.ts                # cn() helper
-    fs/
-      paths.ts              # slug-veiligheid, path-traversal-bescherming
-      atomic-write.ts       # temp + rename
-    schema/
-      enums.ts              # status, waitingOn, riskLevel, priority
-      config.ts             # Zod schema projectradar.config.json
-      meta.ts               # Zod schema project.meta.json
+    ai/            # provider-resolver, prompts, generate-status, generate-review
+    fs/            # path-safety en atomic-write
+    parse/         # markdown- en JSON-parsers
+    projects/      # loaders, signals, create, add-update, recover, save-status
+    schema/        # Zod-schemas (meta, config, enums)
+    serialize/     # meta + file templates
+    export/        # markdown builders + writer
+  types/           # gedeelde types
+examples/
+  denkmachine-demo/  # voorbeeldproject (kopieerbaar vanuit de app)
+docs/                # workflow / file-structure / prompts / example-project
+tests/               # node:test op pure helpers en write-flow
 ```
-
-De projectdata zelf (de mappen met `project.meta.json` etc.) leeft **buiten** deze repo, op de plek waar `PROJECTRADAR_ROOT` naar wijst.
