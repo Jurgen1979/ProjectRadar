@@ -6,6 +6,8 @@ import type { DashboardCard, DashboardData } from "@/lib/projects/dashboard-data
 import type { Signal } from "@/lib/projects/signals";
 import { ProjectCard } from "./project-card";
 import { cn } from "@/lib/utils";
+import { ExportButton } from "@/components/export-button";
+import { exportDashboardAction } from "@/app/projects/exports/actions";
 
 type SignalFilter = "any" | Signal;
 type StatusFilter = "active-only" | "hide-done" | "all";
@@ -125,12 +127,19 @@ export function ProjectsDashboard({ data }: { data: DashboardData }) {
             {data.staleDays !== 14 ? ` · stale-drempel ${data.staleDays} dagen` : ""}
           </p>
         </div>
-        <Link
-          href="/projects/new"
-          className="px-3 py-1.5 text-sm rounded-md bg-accent text-accent-foreground hover:opacity-90"
-        >
-          + nieuw project
-        </Link>
+        <div className="flex items-center gap-2 flex-wrap">
+          <ExportButton
+            action={exportDashboardAction}
+            label="Exporteer dashboard"
+            pendingLabel="Exporteren…"
+          />
+          <Link
+            href="/projects/new"
+            className="px-3 py-1.5 text-sm rounded-md bg-accent text-accent-foreground hover:opacity-90"
+          >
+            + nieuw project
+          </Link>
+        </div>
       </header>
 
       <div className="rounded-lg border border-border bg-background p-3 space-y-3">

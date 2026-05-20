@@ -6,6 +6,8 @@ import {
   generateAiReviewAction,
   type AiReviewState,
 } from "@/app/review/actions";
+import { exportReviewAction } from "@/app/review/export-actions";
+import { ExportButton } from "@/components/export-button";
 import { renderReviewMarkdown } from "@/lib/export/review-md";
 import type { ReviewData } from "@/lib/projects/review";
 import { MarkdownBlocks } from "@/components/projects/detail/blocks";
@@ -56,6 +58,12 @@ export function ReviewActions({
         >
           {copied ? "Gekopieerd ✓" : "Kopieer als markdown"}
         </button>
+        <ExportButton
+          action={exportReviewAction}
+          label="Exporteer naar /exports"
+          pendingLabel="Exporteren…"
+          hiddenFields={{ aiText: state.text ?? "" }}
+        />
       </div>
 
       {state.error ? (

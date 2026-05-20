@@ -3,6 +3,7 @@ import type { Project } from "@/types/project";
 import type { Signal } from "@/lib/projects/signals";
 import { RiskIndicator, SignalPill, StatusPill, TagPill, WaitingPill } from "../pills";
 import { formatAge } from "@/lib/projects/format";
+import { ExportProjectButton } from "./export-project-button";
 
 export function ProjectHeader({
   project,
@@ -52,7 +53,7 @@ export function ProjectHeader({
           >
             Status genereren
           </Link>
-          <ActionButton label="Exporteren" hint="Fase 9" />
+          <ExportProjectButton slug={project.slug} />
         </div>
       </div>
 
@@ -81,19 +82,5 @@ export function ProjectHeader({
         </div>
       ) : null}
     </header>
-  );
-}
-
-function ActionButton({ label, hint }: { label: string; hint: string }) {
-  return (
-    <button
-      type="button"
-      disabled
-      title={`${hint} — nog niet beschikbaar`}
-      className="px-3 py-1.5 text-xs rounded-md border border-border bg-muted/40 text-muted-foreground cursor-not-allowed"
-    >
-      {label}
-      <span className="ml-1.5 text-[10px] font-mono opacity-60">{hint}</span>
-    </button>
   );
 }
