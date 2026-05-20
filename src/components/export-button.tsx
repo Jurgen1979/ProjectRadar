@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
+import { useUnifiedAction } from "@/lib/io/use-unified-action";
 import { cn } from "@/lib/utils";
 
 export type ExportActionState = {
@@ -15,24 +16,27 @@ export type ExportAction = (
 ) => Promise<ExportActionState>;
 
 /**
- * Generic export button + status banner. The action must return
- * { saved?, error? }. Hidden fields are inlined into the form so the
- * action can pick up extra context (e.g. AI-review text).
+ * Generic export button + status banner. Both web (server action) and Tauri
+ * (client function) variants are passed; the runtime decides at call time.
+ * Hidden fields are inlined into the form so each handler can read them.
  */
 export function ExportButton({
-  action,
+  webAction,
+  tauriAction,
   label,
   pendingLabel = "Exporteren…",
   hiddenFields = {},
   className,
 }: {
-  action: ExportAction;
+  webAction: ExportAction;
+  tauriAction: ExportAction;
   label: string;
   pendingLabel?: string;
   hiddenFields?: Record<string, string>;
   className?: string;
 }) {
-  const [state, run] = useActionState<ExportActionState, FormData>(action, {});
+  const dispatch = useUnifiedAction<ExportActionState>(webAction, tauriAction);
+  const [state, run] = useActionState<ExportActionState, FormData>(dispatch, {});
 
   return (
     <div className="space-y-2">

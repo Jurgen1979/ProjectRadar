@@ -7,6 +7,11 @@ import {
   type AiReviewState,
 } from "@/app/review/actions";
 import { exportReviewAction } from "@/app/review/export-actions";
+import {
+  exportReviewTauri,
+  generateReviewTauri,
+} from "@/lib/tauri-handlers/projects";
+import { useUnifiedAction } from "@/lib/io/use-unified-action";
 import { ExportButton } from "@/components/export-button";
 import { renderReviewMarkdown } from "@/lib/export/review-md";
 import type { ReviewData } from "@/lib/projects/review";
@@ -22,10 +27,11 @@ export function ReviewActions({
   aiEnabled: boolean;
   aiReason: string | null;
 }) {
-  const [state, action] = useActionState<AiReviewState, FormData>(
+  const dispatch = useUnifiedAction<AiReviewState>(
     generateAiReviewAction,
-    {},
+    generateReviewTauri,
   );
+  const [state, action] = useActionState<AiReviewState, FormData>(dispatch, {});
   const [copied, setCopied] = useState(false);
 
   function copyMarkdown() {
@@ -59,7 +65,8 @@ export function ReviewActions({
           {copied ? "Gekopieerd ✓" : "Kopieer als markdown"}
         </button>
         <ExportButton
-          action={exportReviewAction}
+          webAction={exportReviewAction}
+          tauriAction={exportReviewTauri}
           label="Exporteer naar /exports"
           pendingLabel="Exporteren…"
           hiddenFields={{ aiText: state.text ?? "" }}

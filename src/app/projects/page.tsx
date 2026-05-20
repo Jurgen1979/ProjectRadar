@@ -4,8 +4,23 @@ import { serverFsIO } from "@/lib/server-io";
 import { ProjectsDashboard } from "@/components/projects/dashboard";
 import { BrokenProjectsList } from "@/components/projects/broken-list";
 import { NoProjectsState, NoRootState } from "@/components/projects/empty-state";
+import { TauriOnly, WebOnly } from "@/components/web-only";
+import { TauriDashboard } from "./_tauri-dashboard";
 
 export default async function ProjectsPage() {
+  return (
+    <>
+      <TauriOnly>
+        <TauriDashboard />
+      </TauriOnly>
+      <WebOnly>
+        <WebDashboard />
+      </WebOnly>
+    </>
+  );
+}
+
+async function WebDashboard() {
   const status = getConfigStatus();
 
   if (status.kind !== "ok") {

@@ -35,6 +35,7 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
+    "resources": ["../examples/denkmachine-demo/**/*"],
     "category": "Productivity",
     "shortDescription": "Local-first projectdashboard",
     "longDescription": "Projectradar is a local-first project dashboard for people who keep their work spread across AI chats, local folders, drives, mail labels, code repos, and design files."

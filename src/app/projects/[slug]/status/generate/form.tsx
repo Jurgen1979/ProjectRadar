@@ -1,15 +1,23 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { useFormStatus } from "react-dom";
+import { useRouter } from "next/navigation";
 import {
   approveStatusAction,
   generateStatusAction,
   type ApproveState,
   type GenerateState,
 } from "./actions";
+import {
+  approveStatusTauri,
+  generateStatusTauri,
+} from "@/lib/tauri-handlers/projects";
+import { useUnifiedAction } from "@/lib/io/use-unified-action";
 import { cn } from "@/lib/utils";
+
+type ApproveStateExt = ApproveState & { redirectSlug?: string };
 
 export function StatusGeneratorForm({
   slug,
@@ -28,17 +36,30 @@ export function StatusGeneratorForm({
   model: string;
   baseURL: string | null;
 }) {
-  const genAction = generateStatusAction.bind(null, slug);
-  const approveAction = approveStatusAction.bind(null, slug);
+  const router = useRouter();
+  const genDispatch = useUnifiedAction<GenerateState>(
+    generateStatusAction.bind(null, slug),
+    generateStatusTauri.bind(null, slug),
+  );
+  const approveDispatch = useUnifiedAction<ApproveStateExt>(
+    approveStatusAction.bind(null, slug),
+    approveStatusTauri.bind(null, slug),
+  );
   const [genState, runGenerate] = useActionState<GenerateState, FormData>(
-    genAction,
+    genDispatch,
     {},
   );
-  const [approveState, runApprove] = useActionState<ApproveState, FormData>(
-    approveAction,
+  const [approveState, runApprove] = useActionState<ApproveStateExt, FormData>(
+    approveDispatch,
     {},
   );
   const [editable, setEditable] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (approveState.redirectSlug) {
+      router.push(`/projects/${approveState.redirectSlug}`);
+    }
+  }, [approveState.redirectSlug, router]);
 
   const proposal = editable ?? genState.proposal ?? null;
 

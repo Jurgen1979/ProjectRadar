@@ -5,6 +5,8 @@ import { computeSignals } from "@/lib/projects/signals";
 import { isSafeSlug, projectDir } from "@/lib/io/paths";
 import { serverFsIO } from "@/lib/server-io";
 import { NoRootState } from "@/components/projects/empty-state";
+import { TauriOnly, WebOnly } from "@/components/web-only";
+import { TauriProjectDetail } from "./_tauri-detail";
 import { ProjectHeader } from "@/components/projects/detail/header";
 import { WarningsBanner } from "@/components/projects/detail/warnings-banner";
 import { StatusSection } from "@/components/projects/detail/status-section";
@@ -25,13 +27,22 @@ export default async function ProjectDetailPage({
   const { slug } = await params;
   if (!isSafeSlug(slug)) notFound();
 
-  const cfg = getConfigStatus();
-  if (cfg.kind !== "ok") {
-    return <NoRootState message={cfg.message} />;
-  }
+  return (
+    <>
+      <TauriOnly>
+        <TauriProjectDetail slug={slug} />
+      </TauriOnly>
+      <WebOnly>
+        <WebProjectDetail slug={slug} />
+      </WebOnly>
+    </>
+  );
+}
 
-  // 404 cleanly when the project directory doesn't exist at all,
-  // so we don't confuse "ontbreekt op disk" with "meta corrupt".
+async function WebProjectDetail({ slug }: { slug: string }) {
+  const cfg = getConfigStatus();
+  if (cfg.kind !== "ok") return <NoRootState message={cfg.message} />;
+
   const dir = projectDir(cfg.root, slug);
   const dirStat = await serverFsIO.stat(dir);
   if (!dirStat || !dirStat.isDirectory) notFound();

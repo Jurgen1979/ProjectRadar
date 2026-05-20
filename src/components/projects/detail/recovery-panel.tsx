@@ -7,6 +7,11 @@ import {
   recoverFoldersAction,
   type RecoverActionState,
 } from "@/app/projects/[slug]/recover/actions";
+import {
+  recoverFileTauri,
+  recoverFoldersTauri,
+} from "@/lib/tauri-handlers/projects";
+import { useUnifiedAction } from "@/lib/io/use-unified-action";
 import { cn } from "@/lib/utils";
 
 export type RecoveryItem = {
@@ -61,8 +66,11 @@ function FilePreview({
   file: string;
   preview: string;
 }) {
-  const boundAction = recoverFileAction.bind(null, slug);
-  const [state, action] = useActionState<RecoverActionState, FormData>(boundAction, {});
+  const dispatch = useUnifiedAction<RecoverActionState>(
+    recoverFileAction.bind(null, slug),
+    recoverFileTauri.bind(null, slug),
+  );
+  const [state, action] = useActionState<RecoverActionState, FormData>(dispatch, {});
   const [open, setOpen] = useState(false);
 
   return (
@@ -92,8 +100,11 @@ function FilePreview({
 }
 
 function FolderRecovery({ slug, folders }: { slug: string; folders: string[] }) {
-  const boundAction = recoverFoldersAction.bind(null, slug);
-  const [state, action] = useActionState<RecoverActionState, FormData>(boundAction, {});
+  const dispatch = useUnifiedAction<RecoverActionState>(
+    recoverFoldersAction.bind(null, slug),
+    recoverFoldersTauri.bind(null, slug),
+  );
+  const [state, action] = useActionState<RecoverActionState, FormData>(dispatch, {});
 
   return (
     <div className="rounded border border-amber-200 bg-background p-3 space-y-2">

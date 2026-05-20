@@ -1,35 +1,47 @@
-import { getAiStatus, getConfigStatus } from "@/lib/config";
-import { buildReviewData } from "@/lib/projects/review";
-import { serverFsIO } from "@/lib/server-io";
-import { NoRootState } from "@/components/projects/empty-state";
+"use client";
+
+import { useEffect, useState } from "react";
+import { useResolvedIO } from "@/lib/io/use-resolved-io";
+import { deriveAiStatus } from "@/lib/io/app-config";
+import { buildReviewData, type ReviewData } from "@/lib/projects/review";
 import { ReviewBucket } from "@/components/projects/review/review-bucket";
 import { ReviewActions } from "@/components/projects/review/review-actions";
 import { bucketsEmpty } from "@/lib/export/review-md";
-import { TauriOnly, WebOnly } from "@/components/web-only";
-import { TauriReview } from "./_tauri-review";
 
-export default function ReviewPage() {
-  return (
-    <div className="space-y-6">
-      <header className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">Review</h1>
-      </header>
-      <TauriOnly>
-        <TauriReview />
-      </TauriOnly>
-      <WebOnly>
-        <WebReview />
-      </WebOnly>
-    </div>
-  );
-}
+export function TauriReview() {
+  const resolved = useResolvedIO();
+  const [data, setData] = useState<ReviewData | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-async function WebReview() {
-  const cfg = getConfigStatus();
-  if (cfg.kind !== "ok") return <NoRootState message={cfg.message} />;
+  useEffect(() => {
+    if (resolved.status !== "ready") return;
+    let cancelled = false;
+    void buildReviewData(resolved.io, resolved.root, resolved.config)
+      .then((d) => {
+        if (!cancelled) setData(d);
+      })
+      .catch((err) => {
+        if (!cancelled) setError((err as Error).message);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [resolved]);
 
-  const data = await buildReviewData(serverFsIO, cfg.root, cfg.config);
-  const ai = getAiStatus(cfg.config);
+  if (resolved.status === "loading") return <Loading />;
+  if (resolved.status === "no-root") {
+    return <p className="text-sm text-muted-foreground">Geen projectroot ingesteld.</p>;
+  }
+  if (error) {
+    return (
+      <div className="rounded-md border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-900">
+        Kon review niet laden: {error}
+      </div>
+    );
+  }
+  if (!data) return <Loading />;
+
+  const ai = deriveAiStatus(resolved.appConfig);
   const allClear = bucketsEmpty(data.buckets);
 
   return (
@@ -97,5 +109,13 @@ async function WebReview() {
         </div>
       )}
     </>
+  );
+}
+
+function Loading() {
+  return (
+    <div className="text-sm text-muted-foreground py-12 text-center">
+      Laden…
+    </div>
   );
 }

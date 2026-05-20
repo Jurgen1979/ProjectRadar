@@ -1,15 +1,24 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect } from "react";
 import { useFormStatus } from "react-dom";
+import { useRouter } from "next/navigation";
 import { seedDemoAction, type SeedDemoState } from "@/app/projects/seed-demo/actions";
+import { useUnifiedAction } from "@/lib/io/use-unified-action";
+import { seedDemoTauri } from "@/lib/tauri-handlers/projects";
 import { cn } from "@/lib/utils";
 
+type State = SeedDemoState & { redirectSlug?: string };
+
 export function SeedDemoButton() {
-  const [state, action] = useActionState<SeedDemoState, FormData>(
-    seedDemoAction,
-    {},
-  );
+  const router = useRouter();
+  const dispatch = useUnifiedAction<State>(seedDemoAction, seedDemoTauri);
+  const [state, action] = useActionState<State, FormData>(dispatch, {});
+
+  useEffect(() => {
+    if (state.redirectSlug) router.push(`/projects/${state.redirectSlug}`);
+  }, [state.redirectSlug, router]);
+
   return (
     <form action={action} className="contents">
       <SubmitInner />

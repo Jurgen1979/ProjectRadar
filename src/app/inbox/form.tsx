@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 import { inboxSaveAction, type InboxFormState } from "./actions";
+import { useUnifiedAction } from "@/lib/io/use-unified-action";
+import { inboxSaveTauri } from "@/lib/tauri-handlers/projects";
 import { Field, FormStyles, SubmitButton } from "@/components/form-fields";
 
 const SOURCES = [
@@ -32,10 +34,11 @@ export function InboxForm({
   defaultSlug: string | null;
   today: string;
 }) {
-  const [state, action] = useActionState<InboxFormState, FormData>(
+  const dispatch = useUnifiedAction<InboxFormState>(
     inboxSaveAction,
-    {},
+    inboxSaveTauri,
   );
+  const [state, action] = useActionState<InboxFormState, FormData>(dispatch, {});
 
   const initial = state.values ?? {
     slug: defaultSlug ?? "",

@@ -1,4 +1,3 @@
-import "server-only";
 
 export function statusTemplate(name: string, today: string): string {
   return `# projectstatus – ${name}

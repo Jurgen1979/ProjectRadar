@@ -3,6 +3,7 @@ import { getConfigStatus } from "@/lib/config";
 import { isSafeSlug, projectDir } from "@/lib/io/paths";
 import { serverFsIO } from "@/lib/server-io";
 import { NoRootState } from "@/components/projects/empty-state";
+import { TauriOnly, WebOnly } from "@/components/web-only";
 import { AddUpdateForm } from "./form";
 
 export default async function NewUpdatePage({
@@ -12,12 +13,6 @@ export default async function NewUpdatePage({
 }) {
   const { slug } = await params;
   if (!isSafeSlug(slug)) notFound();
-
-  const cfg = getConfigStatus();
-  if (cfg.kind !== "ok") return <NoRootState message={cfg.message} />;
-
-  if (!(await serverFsIO.exists(projectDir(cfg.root, slug)))) notFound();
-
   const today = new Date().toISOString().slice(0, 10);
 
   return (
@@ -34,7 +29,19 @@ export default async function NewUpdatePage({
           project wordt bijgewerkt.
         </p>
       </header>
-      <AddUpdateForm slug={slug} defaultDate={today} />
+      <TauriOnly>
+        <AddUpdateForm slug={slug} defaultDate={today} />
+      </TauriOnly>
+      <WebOnly>
+        <WebPage slug={slug} defaultDate={today} />
+      </WebOnly>
     </div>
   );
+}
+
+async function WebPage({ slug, defaultDate }: { slug: string; defaultDate: string }) {
+  const cfg = getConfigStatus();
+  if (cfg.kind !== "ok") return <NoRootState message={cfg.message} />;
+  if (!(await serverFsIO.exists(projectDir(cfg.root, slug)))) notFound();
+  return <AddUpdateForm slug={slug} defaultDate={defaultDate} />;
 }

@@ -8,6 +8,7 @@ import { ProjectCard } from "./project-card";
 import { cn } from "@/lib/utils";
 import { ExportButton } from "@/components/export-button";
 import { exportDashboardAction } from "@/app/projects/exports/actions";
+import { exportDashboardTauri } from "@/lib/tauri-handlers/projects";
 
 type SignalFilter = "any" | Signal;
 type StatusFilter = "active-only" | "hide-done" | "all";
@@ -129,7 +130,8 @@ export function ProjectsDashboard({ data }: { data: DashboardData }) {
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <ExportButton
-            action={exportDashboardAction}
+            webAction={exportDashboardAction}
+            tauriAction={exportDashboardTauri}
             label="Exporteer dashboard"
             pendingLabel="Exporteren…"
           />

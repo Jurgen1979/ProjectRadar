@@ -1,10 +1,15 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect } from "react";
 import { useFormStatus } from "react-dom";
+import { useRouter } from "next/navigation";
 import { editMetaAction, type EditMetaFormState } from "./actions";
+import { useUnifiedAction } from "@/lib/io/use-unified-action";
+import { editMetaTauri } from "@/lib/tauri-handlers/projects";
 import { Field, FormStyles, Select, SubmitButton } from "@/components/form-fields";
 import type { ProjectMeta } from "@/lib/schema/meta";
+
+type FormState = EditMetaFormState & { redirectSlug?: string };
 
 const STATUSES = ["active", "paused", "waiting", "done", "archived", "idea"] as const;
 const WAITING = ["me", "client", "third-party", "none", "unclear"] as const;
@@ -12,11 +17,15 @@ const RISKS = ["none", "low", "medium", "high", "unclear"] as const;
 const PRIORITIES = ["low", "medium", "high"] as const;
 
 export function EditMetaForm({ slug, meta }: { slug: string; meta: ProjectMeta }) {
-  const boundAction = editMetaAction.bind(null, slug);
-  const [state, action] = useActionState<EditMetaFormState, FormData>(
-    boundAction,
-    {},
-  );
+  const router = useRouter();
+  const boundWeb = editMetaAction.bind(null, slug);
+  const boundTauri = editMetaTauri.bind(null, slug);
+  const dispatch = useUnifiedAction<FormState>(boundWeb, boundTauri);
+  const [state, action] = useActionState<FormState, FormData>(dispatch, {});
+
+  useEffect(() => {
+    if (state.redirectSlug) router.push(`/projects/${state.redirectSlug}`);
+  }, [state.redirectSlug, router]);
 
   const initial = state.values ?? {
     name: meta.name,

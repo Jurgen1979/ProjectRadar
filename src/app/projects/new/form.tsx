@@ -1,9 +1,14 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { useFormStatus } from "react-dom";
+import { useRouter } from "next/navigation";
 import { createProjectAction, type CreateProjectFormState } from "./actions";
+import { useUnifiedAction } from "@/lib/io/use-unified-action";
+import { createProjectTauri } from "@/lib/tauri-handlers/projects";
 import { cn } from "@/lib/utils";
+
+type FormState = CreateProjectFormState & { redirectSlug?: string };
 
 const STATUSES = ["active", "paused", "waiting", "done", "archived", "idea"];
 const WAITING = ["me", "client", "third-party", "none", "unclear"];
@@ -21,10 +26,16 @@ function slugify(input: string): string {
 }
 
 export function NewProjectForm() {
-  const [state, action] = useActionState<CreateProjectFormState, FormData>(
+  const router = useRouter();
+  const dispatch = useUnifiedAction<FormState>(
     createProjectAction,
-    {},
+    createProjectTauri,
   );
+  const [state, action] = useActionState<FormState, FormData>(dispatch, {});
+
+  useEffect(() => {
+    if (state.redirectSlug) router.push(`/projects/${state.redirectSlug}`);
+  }, [state.redirectSlug, router]);
 
   const initial = state.values ?? {
     name: "",

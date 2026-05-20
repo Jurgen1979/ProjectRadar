@@ -1,9 +1,14 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect } from "react";
 import { useFormStatus } from "react-dom";
+import { useRouter } from "next/navigation";
 import { addUpdateAction, type AddUpdateFormState } from "./actions";
+import { useUnifiedAction } from "@/lib/io/use-unified-action";
+import { addUpdateTauri } from "@/lib/tauri-handlers/projects";
 import { cn } from "@/lib/utils";
+
+type FormState = AddUpdateFormState & { redirectSlug?: string };
 
 const SOURCES = [
   "ChatGPT",
@@ -23,11 +28,15 @@ export function AddUpdateForm({
   slug: string;
   defaultDate: string;
 }) {
-  const boundAction = addUpdateAction.bind(null, slug);
-  const [state, action] = useActionState<AddUpdateFormState, FormData>(
-    boundAction,
-    {},
-  );
+  const router = useRouter();
+  const boundWeb = addUpdateAction.bind(null, slug);
+  const boundTauri = addUpdateTauri.bind(null, slug);
+  const dispatch = useUnifiedAction<FormState>(boundWeb, boundTauri);
+  const [state, action] = useActionState<FormState, FormData>(dispatch, {});
+
+  useEffect(() => {
+    if (state.redirectSlug) router.push(`/projects/${state.redirectSlug}`);
+  }, [state.redirectSlug, router]);
 
   const initial = state.values ?? {
     title: "",

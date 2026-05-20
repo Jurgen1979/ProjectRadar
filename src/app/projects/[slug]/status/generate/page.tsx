@@ -4,7 +4,9 @@ import { getAiStatus, getConfigStatus } from "@/lib/config";
 import { isSafeSlug, projectDir } from "@/lib/io/paths";
 import { serverFsIO } from "@/lib/server-io";
 import { NoRootState } from "@/components/projects/empty-state";
+import { TauriOnly, WebOnly } from "@/components/web-only";
 import { StatusGeneratorForm } from "./form";
+import { TauriStatusGenerate } from "./_tauri-page";
 
 export default async function GenerateStatusPage({
   params,
@@ -13,18 +15,6 @@ export default async function GenerateStatusPage({
 }) {
   const { slug } = await params;
   if (!isSafeSlug(slug)) notFound();
-
-  const cfg = getConfigStatus();
-  if (cfg.kind !== "ok") return <NoRootState message={cfg.message} />;
-
-  const dir = projectDir(cfg.root, slug);
-  const dirStat = await serverFsIO.stat(dir);
-  if (!dirStat || !dirStat.isDirectory) notFound();
-
-  const currentStatus = await serverFsIO.readText(
-    serverFsIO.join(dir, "project-status.md"),
-  );
-  const ai = getAiStatus(cfg.config);
 
   return (
     <div className="space-y-6">
@@ -46,6 +36,31 @@ export default async function GenerateStatusPage({
         </p>
       </header>
 
+      <TauriOnly>
+        <TauriStatusGenerate slug={slug} />
+      </TauriOnly>
+      <WebOnly>
+        <WebPage slug={slug} />
+      </WebOnly>
+    </div>
+  );
+}
+
+async function WebPage({ slug }: { slug: string }) {
+  const cfg = getConfigStatus();
+  if (cfg.kind !== "ok") return <NoRootState message={cfg.message} />;
+
+  const dir = projectDir(cfg.root, slug);
+  const dirStat = await serverFsIO.stat(dir);
+  if (!dirStat || !dirStat.isDirectory) notFound();
+
+  const currentStatus = await serverFsIO.readText(
+    serverFsIO.join(dir, "project-status.md"),
+  );
+  const ai = getAiStatus(cfg.config);
+
+  return (
+    <>
       <StatusGeneratorForm
         slug={slug}
         currentStatus={currentStatus}
@@ -56,11 +71,11 @@ export default async function GenerateStatusPage({
         baseURL={ai.baseURL}
       />
 
-      <p className="text-xs text-muted-foreground">
+      <p className="text-xs text-muted-foreground mt-6">
         <Link href={`/projects/${slug}`} className="hover:underline">
           ← terug naar project
         </Link>
       </p>
-    </div>
+    </>
   );
 }

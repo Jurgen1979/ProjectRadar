@@ -131,6 +131,46 @@ Beperking:
 
 Volgende fase: pages naar client-flow, server actions vervangen door desktop-compatible async functies.
 
+### Fase 4 — Pages/clientflow herstellen
+
+**Status: groen.**
+
+Strategie: dual-mode rendering via `<TauriOnly>`/`<WebOnly>`. Web-mode behoudt het bestaande server-component pad; Tauri-mode rendert client-componenten die `tauriFsIO` + app-config gebruiken.
+
+- `src/lib/io/use-resolved-io.ts` — `useResolvedIO()` hook returneert `{ io, root, config }` voor client-pages, met loading/no-root states. `appConfigToProjectConfig()` bridge.
+- `src/lib/io/use-unified-action.ts` — `useUnifiedAction(webAction, tauriHandler)` dispatcht op runtime; gebruikt door alle forms.
+- `src/lib/io/resource.ts` — wrapt `resolveResource()` voor bundled examples (gebruikt door seed-demo).
+- `src/lib/tauri-handlers/projects.ts` — alle Tauri-side equivalents van server actions (createProject, editMeta, addUpdate, inboxSave, recoverFile, recoverFolders, generateStatus, approveStatus, generateReview, exportDashboard, exportReview, exportProject, seedDemo).
+- Resources: `examples/denkmachine-demo/**/*` toegevoegd aan `tauri.conf.json` `bundle.resources` zodat de demo meekomt in de installer.
+
+Per page een `_tauri-*.tsx` client-component naast het bestaande server-component, beide gerenderd door de top-level page maar gefilterd via `TauriOnly`/`WebOnly`:
+- `/projects` → `TauriDashboard` (loadDashboardData via tauriFsIO)
+- `/projects/[slug]` → `TauriProjectDetail` (loadProject + detectMissing + previews via tauriFsIO)
+- `/projects/[slug]/edit` → `TauriEdit` (loadProject voor pre-fill)
+- `/projects/[slug]/updates/new` → directe form-render in Tauri-mode (form valideert zelf)
+- `/projects/[slug]/status/generate` → `TauriStatusGenerate` (current status + AI config uit store)
+- `/inbox` → `TauriInbox` (loadAllProjects)
+- `/review` → `TauriReview` (buildReviewData)
+
+Forms aangepast met `useUnifiedAction`:
+- NewProjectForm, EditMetaForm, AddUpdateForm, InboxForm, RecoveryPanel (file + folder), SeedDemoButton, StatusGeneratorForm (gen + approve), ReviewActions (AI-review)
+- ExportButton accepteert nu `webAction` + `tauriAction` props
+- Forms doen client-side `router.push(/projects/<slug>)` op `redirectSlug` (Tauri kan geen server redirect)
+
+Removed:
+- `import "server-only"` uit `lib/serialize/{templates,meta}.ts` — pure code, nu vanuit zowel client als server bereikbaar via tauri-handlers.
+
+Checks:
+- `npm test` → 66/66 groen
+- `npm run typecheck` schoon
+- `npm run build` schoon, 13 routes (incl. /welcome)
+
+Beperking:
+- Volledige verificatie in een echte Tauri webview vereist een display (Fase 6+). Functionele logica is via tests gevalideerd; UI is via build geverifieerd.
+
+Volgende fase: settings UI voor AI met OpenRouter/OpenAI + Test-verbinding-knop, AI-statusgenerator end-to-end met store-config.
+
+
 
 
 
