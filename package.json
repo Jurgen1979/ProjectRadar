@@ -8,7 +8,7 @@
     "build:static": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
-    "test": "node --conditions=react-server --import tsx --test tests/parse/*.test.ts tests/projects/*.test.ts tests/ai/*.test.ts tests/export/*.test.ts",
+    "test": "node --conditions=react-server --import tsx --test tests/parse/*.test.ts tests/projects/*.test.ts tests/ai/*.test.ts tests/export/*.test.ts tests/io/*.test.ts",
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
     "tauri:build": "tauri build"

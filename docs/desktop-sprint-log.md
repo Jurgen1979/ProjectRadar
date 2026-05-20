@@ -84,4 +84,29 @@ Risico/afwijking:
 
 Volgende fase: app-config naar Tauri store + first-run flow zonder env-var.
 
+### Fase 2 — Config en projectroot via app-data
+
+**Status: groen.**
+
+Gedaan:
+- `src/lib/io/app-config.ts` — Zod-schema voor de Tauri-stored config blob, met defaults voor alle velden. Schema:
+  - `projectRoot: string | null`
+  - `ai: { provider, model, apiKey, openRouterReferer?, openRouterTitle?, baseUrlOverride? }`
+  - `staleDays`, `reviewWindowDays`, `maxUpdatesForStatusGeneration`, `backupOnStatusOverwrite`, `defaultLanguage`
+- `deriveAiStatus(config)` produceert dezelfde `AiCallConfig` shape als `resolveServerAi` — Tauri-client en server-side actions zijn aan dezelfde interface gekoppeld.
+- `maskApiKey()` voor UI-display (`••••••••1234`).
+- `src/lib/io/tauri-store.ts` — load/save/patch helpers rond `@tauri-apps/plugin-store`. Auto-save aan, single-blob `projectradar.json` in app data dir. Tolerant voor missing/corrupt store (valt terug op defaults).
+
+Dev fallback:
+- `getConfigStatus()` in `src/lib/config.ts` blijft ongewijzigd. Wie `npm run dev` draait gebruikt `.env.local` + env-vars.
+- Tauri webview gebruikt `loadAppConfig()` + `deriveAiStatus()` — komt aan bod in Fase 3 (onboarding) en Fase 4 (page-conversion).
+
+Checks:
+- `npm test` → **66/66 groen** (9 nieuwe tests in `tests/io/app-config.test.ts`).
+- `npm run typecheck` schoon.
+- `npm run build` schoon.
+
+Volgende fase: welkomstscherm + native folder picker + persistente projectroot.
+
+
 
